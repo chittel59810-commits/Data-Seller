@@ -138,7 +138,7 @@ def buy_package():
     return jsonify({"status": "success", "msg": "ဝယ်ယူမှု အောင်မြင်ပါသည်။"})
 
 # ၅။ Telegram Webhook (Confirm ခလုတ်နှိပ်လျှင် အလုပ်လုပ်မည့်အပိုင်း)
-@app.route(f'/{BOT_TOKEN}', methods=['POST'])
+@app.route('/webhook', methods=['POST'])
 def telegram_webhook():
     json_str = request.get_data().decode('UTF-8')
     update = telebot.types.Update.de_json(json_str)
@@ -147,34 +147,45 @@ def telegram_webhook():
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    data = call.data.split('_')
-    action = data[0]
-    user_phone = data[1]
+    try:
+        data = call.data.split('_')
+        action = data[0]
+        user_phone = data[1]
 
-    if action == "confirm":
-        amount = int(data[2])
-        conn = sqlite3.connect('users.db')
-        c = conn.cursor()
-        c.execute("UPDATE users SET balance = balance + ? WHERE phone = ?", (amount, user_phone))
-        conn.commit()
-        conn.close()
+        if action == "confirm":
+            amount = int(data[2])
+            conn = sqlite3.connect('users.db')
+            c = conn.cursor()
+            c.execute("UPDATE users SET balance = balance + ? WHERE phone = ?", (amount, user_phone))
+            conn.commit()
+            conn.close()
 
-        bot.edit_message_caption(
-            caption=call.message.caption + f"\n\n✅ **အတည်ပြုပြီး ({amount:,} Ks ထည့်ပေးပြီးပါပြီ)**",
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id
-        )
-    elif action == "reject":
-        bot.edit_message_caption(
-            caption=call.message.caption + "\n\n❌ **ငြင်းပယ်လိုက်ပါသည်**",
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id
-        )
+            # ခလုတ်နှိပ်လိုက်ကြောင်း Notification ပြခြင်း
+            bot.answer_callback_query(call.id, "✅ ငွေထည့်ပေးပြီးပါပြီ!")
+
+            # ပုံအောက်က စာသားကို ပြောင်းလဲခြင်းနှင့် ခလုတ်ဖျောက်ခြင်း
+            new_caption = f"{call.message.caption}\n\n✅ အတည်ပြုပြီး ({amount:,} Ks ထည့်ပေးပြီးပါပြီ)"
+            bot.edit_message_caption(
+                caption=new_caption,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id
+            )
+
+        elif action == "reject":
+            bot.answer_callback_query(call.id, "❌ ငြင်းပယ်လိုက်ပါပြီ!")
+            new_caption = f"{call.message.caption}\n\n❌ ငြင်းပယ်လိုက်ပါသည်"
+            bot.edit_message_caption(
+                caption=new_caption,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id
+            )
+    except Exception as e:
+        bot.answer_callback_query(call.id, f"Error: {str(e)}", show_alert=True)
 
 @app.route('/set_webhook')
 def set_webhook():
     bot.remove_webhook()
-    bot.set_webhook(url=f"{WEB_URL}/{BOT_TOKEN}")
+    bot.set_webhook(url="https://data-seller.onrender.com/webhook")
     return "Webhook ချိတ်ဆက်မှု အောင်မြင်ပါပြီ!"
 
 if __name__ == "__main__":
