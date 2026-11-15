@@ -6,8 +6,8 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # ================= CONFIG (ဒီနေရာ ၃ ခုကို မင်းရဲ့ အချက်အလက်နဲ့ ပြင်ပါ) =================
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-ADMIN_CHAT_ID = "YOUR_CHAT_ID" # @htet7701 ရဲ့ Chat ID နံပါတ် (ဂဏန်းသီးသန့်)
+BOT_TOKEN = "9232024866:AAGdO3i-s20H16KkLifls500wVmWb5AK_ZA"
+ADMIN_CHAT_ID = "7102568821" # @htet7701 ရဲ့ Chat ID နံပါတ် (ဂဏန်းသီးသန့်)
 WEB_URL = "https://your-app-name.onrender.com" # Render တင်ပြီးမှ ရလာတဲ့ Link ကို လာထည့်ရန်
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
