@@ -1,36 +1,38 @@
 import os
-import sqlite3
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# ================= CONFIG (ဒီနေရာ ၃ ခုကို မင်းရဲ့ အချက်အလက်နဲ့ ပြင်ပါ) =================
+# ================= CONFIG (ဒီနေရာ ၂ ခုမှာ မင်းရဲ့ Token နဲ့ ID ပြန်ထည့်ပါ) =================
 BOT_TOKEN = "9232024866:AAGdO3i-s20H16KkLifls500wVmWb5AK_ZA"
-ADMIN_CHAT_ID = "7102568821" # @htet7701 ရဲ့ Chat ID နံပါတ် (ဂဏန်းသီးသန့်)
-WEB_URL = "https://your-app-name.onrender.com" # Render တင်ပြီးမှ ရလာတဲ့ Link ကို လာထည့်ရန်
+ADMIN_CHAT_ID = "7102568821"
+
+# မင်းရဲ့ Firebase Database URL နှင့် Render URL (ချိတ်ဆက်ပြီးသား)
+FIREBASE_URL = "https://dataseller-e4c0e-default-rtdb.firebaseio.com"
+WEB_URL = "https://data-seller.onrender.com"
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 CORS(app)
 
-# Database တည်ဆောက်ခြင်း
-def init_db():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (phone TEXT PRIMARY KEY, password TEXT, balance INTEGER)''')
-    conn.commit()
-    conn.close()
+# Firebase မှ User အချက်အလက် လှမ်းယူသည့် Function
+def get_user(phone):
+    res = requests.get(f"{FIREBASE_URL}/users/{phone}.json")
+    if res.status_code == 200 and res.json():
+        return res.json()
+    return None
 
-init_db()
+# Firebase တွင် User အချက်အလက် သိမ်းဆည်းသည့် Function
+def save_user(phone, data):
+    requests.patch(f"{FIREBASE_URL}/users/{phone}.json", json=data)
 
-# Server အလုပ်လုပ်မလုပ် စမ်းသပ်ရန် Home Route
 @app.route('/', methods=['GET'])
 def index():
-    return "Telecom Reseller Server is Running 24/7!", 200
+    return "Telecom Reseller Server with Firebase is Running 24/7!", 200
 
-# ၁။ Login နှင့် Register API
+# ၁။ Login နှင့် Register API (Firebase စနစ်)
 @app.route('/auth', methods=['POST'])
 def auth():
     data = request.json
@@ -38,36 +40,24 @@ def auth():
     phone = data.get('phone')
     password = data.get('password')
 
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
+    user = get_user(phone)
 
     if mode == 'register':
-        c.execute("SELECT * FROM users WHERE phone = ?", (phone,))
-        if c.fetchone():
-            conn.close()
+        if user:
             return jsonify({"status": "error", "msg": "ဤဖုန်းနံပါတ်ဖြင့် အကောင့်ရှိပြီးသားဖြစ်ပါသည်။"})
-        c.execute("INSERT INTO users VALUES (?, ?, 0)", (phone, password))
-        conn.commit()
-        conn.close()
+        save_user(phone, {"password": password, "balance": 0})
         return jsonify({"status": "success", "msg": "အကောင့်သစ်ဖွင့်ခြင်း အောင်မြင်ပါသည်။"})
 
     elif mode == 'login':
-        c.execute("SELECT balance FROM users WHERE phone = ? AND password = ?", (phone, password))
-        row = c.fetchone()
-        conn.close()
-        if row:
-            return jsonify({"status": "success", "balance": row[0]})
+        if user and str(user.get("password")) == str(password):
+            return jsonify({"status": "success", "balance": user.get("balance", 0)})
         return jsonify({"status": "error", "msg": "ဖုန်းနံပါတ် သို့မဟုတ် Password မှားယွင်းနေပါသည်။"})
 
 # ၂။ လက်ကျန်ငွေ စစ်ဆေးရန် API
 @app.route('/balance/<phone>', methods=['GET'])
 def get_balance(phone):
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute("SELECT balance FROM users WHERE phone = ?", (phone,))
-    row = c.fetchone()
-    conn.close()
-    return jsonify({"balance": row[0] if row else 0})
+    user = get_user(phone)
+    return jsonify({"balance": user.get("balance", 0) if user else 0})
 
 # ၃။ ငွေဖြည့်ပြေစာ Upload တင်သည့် API
 @app.route('/upload_receipt', methods=['POST'])
@@ -103,28 +93,21 @@ def buy_package():
     price = int(data.get('price'))
     provider = data.get('provider')
 
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute("SELECT balance FROM users WHERE phone = ?", (user_phone,))
-    row = c.fetchone()
+    user = get_user(user_phone)
+    current_bal = user.get("balance", 0) if user else 0
 
-    if not row or row[0] < price:
-        conn.close()
+    if current_bal < price:
         return jsonify({"status": "error", "type": "low_balance", "msg": "သင့်အကောင့်ထဲတွင် လက်ကျန်ငွေ မလုံလောက်ပါ။"})
 
-    # Auto ဝယ်မည့် Agent အကောင့်ထဲ ပိုက်ဆံလောက်မလောက် စစ်ဆေးခြင်း
     agent_balance_ok = True # False ပြောင်းပါက ဝယ်သူဘက်တွင် System Error ပြမည်
 
     if not agent_balance_ok:
-        conn.close()
         return jsonify({"status": "error", "type": "system_error"})
 
-    # ဝယ်သူအကောင့်မှ ငွေဖြတ်ခြင်း
-    c.execute("UPDATE users SET balance = balance - ? WHERE phone = ?", (price, user_phone))
-    conn.commit()
-    conn.close()
+    # ဝယ်သူအကောင့်မှ ငွေဖြတ်ပြီး Firebase တွင် သိမ်းခြင်း
+    new_bal = current_bal - price
+    save_user(user_phone, {"balance": new_bal})
 
-    # Admin ဆီသို့ အော်ဒါဝင်ကြောင်း အသိပေးစာပို့ခြင်း
     order_msg = (
         f"📦 **Package အော်ဒါအသစ် ဝင်ပါသည်**\n\n"
         f"👤 ဝယ်သူအကောင့်: `{user_phone}`\n"
@@ -137,7 +120,7 @@ def buy_package():
 
     return jsonify({"status": "success", "msg": "ဝယ်ယူမှု အောင်မြင်ပါသည်။"})
 
-# ၅။ Telegram Webhook (Confirm ခလုတ်နှိပ်လျှင် အလုပ်လုပ်မည့်အပိုင်း)
+# ၅။ Telegram Webhook (Confirm ခလုတ်နှိပ်လျှင် Firebase ထဲ ငွေပေါင်းထည့်မည့်အပိုင်း)
 @app.route('/webhook', methods=['POST'])
 def telegram_webhook():
     json_str = request.get_data().decode('UTF-8')
@@ -154,16 +137,12 @@ def callback_query(call):
 
         if action == "confirm":
             amount = int(data[2])
-            conn = sqlite3.connect('users.db')
-            c = conn.cursor()
-            c.execute("UPDATE users SET balance = balance + ? WHERE phone = ?", (amount, user_phone))
-            conn.commit()
-            conn.close()
+            user = get_user(user_phone)
+            current_bal = user.get("balance", 0) if user else 0
+            new_bal = current_bal + amount
+            save_user(user_phone, {"balance": new_bal})
 
-            # ခလုတ်နှိပ်လိုက်ကြောင်း Notification ပြခြင်း
             bot.answer_callback_query(call.id, "✅ ငွေထည့်ပေးပြီးပါပြီ!")
-
-            # ပုံအောက်က စာသားကို ပြောင်းလဲခြင်းနှင့် ခလုတ်ဖျောက်ခြင်း
             new_caption = f"{call.message.caption}\n\n✅ အတည်ပြုပြီး ({amount:,} Ks ထည့်ပေးပြီးပါပြီ)"
             bot.edit_message_caption(
                 caption=new_caption,
@@ -185,7 +164,7 @@ def callback_query(call):
 @app.route('/set_webhook')
 def set_webhook():
     bot.remove_webhook()
-    bot.set_webhook(url="https://data-seller.onrender.com/webhook")
+    bot.set_webhook(url=f"{WEB_URL}/webhook")
     return "Webhook ချိတ်ဆက်မှု အောင်မြင်ပါပြီ!"
 
 if __name__ == "__main__":
