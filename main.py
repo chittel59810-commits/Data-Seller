@@ -7,7 +7,7 @@ from flask_cors import CORS
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# ================= CONFIG (ဒီနေရာ ၂ ခုမှာ မင်းရဲ့ Token နဲ့ ID ပြန်ထည့်ပါ) =================
+# ================= CONFIG (မင်းရဲ့ Token နဲ့ Chat ID ဒီမှာထည့်ပါ) =================
 BOT_TOKEN = "9232024866:AAGdO3i-s20H16KkLifls500wVmWb5AK_ZA"
 ADMIN_CHAT_ID = "7102568821"
 
@@ -39,14 +39,13 @@ def get_history(phone):
         data = res.json()
         items = list(data.values())
         items.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
-        return items[:15] # နောက်ဆုံး ၁၅ ခု ပြသမည်
+        return items[:15]
     return []
 
 @app.route('/', methods=['GET'])
 def index():
-    return "Telecom Reseller Server V2 is Running 24/7!", 200
+    return "Telecom Reseller Server V3 is Running 24/7!", 200
 
-# ၁။ Login နှင့် Register API
 @app.route('/auth', methods=['POST'])
 def auth():
     data = request.json
@@ -67,7 +66,6 @@ def auth():
             return jsonify({"status": "success", "balance": user.get("balance", 0)})
         return jsonify({"status": "error", "msg": "ဖုန်းနံပါတ် သို့မဟုတ် Password မှားယွင်းနေပါသည်။"})
 
-# ၂။ လက်ကျန်ငွေ နှင့် History စစ်ဆေးရန် API
 @app.route('/user_data/<phone>', methods=['GET'])
 def user_data(phone):
     user = get_user(phone)
@@ -75,7 +73,6 @@ def user_data(phone):
     hist = get_history(phone)
     return jsonify({"balance": bal, "history": hist})
 
-# ၃။ ငွေဖြည့်ပြေစာ Upload တင်သည့် API (ပြေစာအတု/အဟောင်း စစ်ဆေးသည့်စနစ် ပါဝင်သည်)
 @app.route('/upload_receipt', methods=['POST'])
 def upload_receipt():
     user_phone = request.form.get('user_phone')
@@ -87,15 +84,12 @@ def upload_receipt():
     if not tid or len(tid) < 4:
         return jsonify({"status": "error", "msg": "ပြေစာပေါ်မှ လုပ်ငန်းစဉ်အမှတ် (နောက်ဆုံး ၆ လုံး) မှန်ကန်စွာ ထည့်ပါ။"})
 
-    # ဤ Transaction ID သုံးပြီးသားလား စစ်ဆေးခြင်း
     tid_check = requests.get(f"{FIREBASE_URL}/used_tids/{tid}.json").json()
     if tid_check:
-        return jsonify({"status": "error", "msg": "⚠️ ဤပြေစာ (လုပ်ငန်းစဉ်အမှတ်) ကို အသုံးပြုပြီးသား ဖြစ်နေပါသည်! ပြေစာအဟောင်း ပြန်တင်၍မရပါ။"})
+        return jsonify({"status": "error", "msg": "⚠️ ဤပြေစာ (လုပ်ငန်းစဉ်အမှတ်) ကို အသုံးပြုပြီးသား ဖြစ်နေပါသည်!"})
 
-    # Transaction ID ကို မှတ်သားထားခြင်း
     requests.put(f"{FIREBASE_URL}/used_tids/{tid}.json", json={"user": user_phone, "amount": amount, "status": "pending"})
 
-    # User History ထဲတွင် စောင့်ဆိုင်းဆဲ (Pending) အဖြစ် ထည့်သွင်းခြင်း
     add_history(user_phone, f"topup_{tid}", {
         "type": "topup",
         "title": f"ငွေသွင်း ({method} - #{tid})",
@@ -120,17 +114,21 @@ def upload_receipt():
     )
 
     bot.send_photo(ADMIN_CHAT_ID, receipt_img, caption=caption, parse_mode="Markdown", reply_markup=markup)
-    return jsonify({"status": "success", "msg": "ပြေစာပို့ပြီးပါပြီ။ Admin အတည်ပြုပြီးပါက အကောင့်ထဲ အလိုလို ငွေဝင်လာပါမည်။"})
+    return jsonify({"status": "success", "msg": "ပြေစာပို့ပြီးပါပြီ။ Admin အတည်ပြုပြီးပါက အကောင့်ထဲ ငွေဝင်လာပါမည်။"})
 
-# ၄။ Data / Plan ဝယ်ယူသည့် API
 @app.route('/buy_package', methods=['POST'])
 def buy_package():
     data = request.json
     user_phone = data.get('user_phone')
-    target_phone = data.get('target_phone')
+    target_phone = data.get('target_phone', '').strip()
     pkg_name = data.get('pkg_name')
     price = int(data.get('price'))
     provider = data.get('provider')
+
+    if "Mytel" in provider and not target_phone.startswith("096"):
+        return jsonify({"status": "error", "msg": "⚠️ Mytel Package အတွက် 096 ဖြင့်စသော Mytel နံပါတ်သာ ထည့်သွင်းပါ။"})
+    if "Eagle" in provider and not target_phone.startswith("097"):
+        return jsonify({"status": "error", "msg": "⚠️ Atom Package အတွက် 097 ဖြင့်စသော Atom နံပါတ်သာ ထည့်သွင်းပါ။"})
 
     user = get_user(user_phone)
     current_bal = user.get("balance", 0) if user else 0
@@ -138,22 +136,24 @@ def buy_package():
     if current_bal < price:
         return jsonify({"status": "error", "type": "low_balance", "msg": "သင့်အကောင့်ထဲတွင် လက်ကျန်ငွေ မလုံလောက်ပါ။"})
 
-    agent_balance_ok = True
-    if not agent_balance_ok:
-        return jsonify({"status": "error", "type": "system_error"})
-
     new_bal = current_bal - price
     save_user(user_phone, {"balance": new_bal})
 
-    order_id = f"ord_{int(time.time())}"
+    ts = int(time.time())
+    order_id = f"ord_{ts}"
     add_history(user_phone, order_id, {
         "type": "buy",
         "title": f"{pkg_name} -> {target_phone}",
         "amount": price,
         "status": "✅ ဝယ်ယူပြီး",
         "time": get_mm_time(),
-        "timestamp": int(time.time())
+        "timestamp": ts
     })
+
+    markup = InlineKeyboardMarkup()
+    markup.add(
+        InlineKeyboardButton("🔄 ငွေပြန်အမ်းမည် (Refund)", callback_data=f"refund_{user_phone}_{price}_{ts}")
+    )
 
     order_msg = (
         f"📦 **Package အော်ဒါအသစ် ဝင်ပါသည်**\n\n"
@@ -163,11 +163,10 @@ def buy_package():
         f"💵 ကျသင့်ငွေ: {price:,} Ks\n"
         f"⚙️ စနစ်: {provider}"
     )
-    bot.send_message(ADMIN_CHAT_ID, order_msg, parse_mode="Markdown")
+    bot.send_message(ADMIN_CHAT_ID, order_msg, parse_mode="Markdown", reply_markup=markup)
 
     return jsonify({"status": "success", "msg": "ဝယ်ယူမှု အောင်မြင်ပါသည်။"})
 
-# ၅။ Telegram Webhook
 @app.route('/webhook', methods=['POST'])
 def telegram_webhook():
     json_str = request.get_data().decode('UTF-8')
@@ -203,6 +202,21 @@ def callback_query(call):
             bot.answer_callback_query(call.id, "❌ ငြင်းပယ်လိုက်ပါပြီ!")
             new_caption = f"{call.message.caption}\n\n❌ ငြင်းပယ်လိုက်ပါသည်"
             bot.edit_message_caption(caption=new_caption, chat_id=call.message.chat.id, message_id=call.message.message_id)
+
+        elif action == "refund":
+            price = int(data[2])
+            ts = data[3]
+
+            user = get_user(user_phone)
+            current_bal = user.get("balance", 0) if user else 0
+            save_user(user_phone, {"balance": current_bal + price})
+
+            add_history(user_phone, f"ord_{ts}", {"status": "🔄 ငွေပြန်အမ်းပြီး (Refunded)", "type": "topup"})
+
+            bot.answer_callback_query(call.id, "🔄 ဝယ်သူ့အကောင့်ထဲ ငွေပြန်အမ်းပေးပြီးပါပြီ!")
+            new_text = f"{call.message.text}\n\n🔄 **ငွေပြန်အမ်းပြီး ({price:,} Ks ပြန်ထည့်ပေးပြီးပါပြီ)**"
+            bot.edit_message_text(text=new_text, chat_id=call.message.chat.id, message_id=call.message.message_id)
+
     except Exception as e:
         bot.answer_callback_query(call.id, f"Error: {str(e)}", show_alert=True)
 
