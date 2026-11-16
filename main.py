@@ -292,34 +292,46 @@ def handle_all_commands(message):
         requests.patch(f"{FIREBASE_URL}/packages/{code}.json", json={"price": new_price})
         bot.reply_to(message, f"✅ {pkgs[code]['name']} ဈေးနှုန်းကို {new_price:,} Ks သို့ ပြောင်းလဲပြီးပါပြီ!")
 
-    elif cmd == '/addpkg':
-        raw_parts = message.text.strip().split(maxsplit=4)
-        if len(raw_parts) < 5:
+        elif cmd == '/addpkg':
+        raw_parts = message.text.strip().split(maxsplit=5)
+        if len(raw_parts) < 6:
             msg = (
                 "⚠️ ပုံစံမှားနေပါသည်။ အောက်ပါအတိုင်း ရိုက်ပါ -\n"
-                "/addpkg ကုဒ် အမျိုးအစား ဈေးနှုန်း နာမည်\n\n"
-                "အမျိုးအစား (၅) ခု:\n"
-                "mytel_mb, mytel_min, atom_mb, mytel_plan, atom_plan\n\n"
+                "/addpkg ကုဒ် အမျိုးအစား Appအမည် ဈေးနှုန်း နာမည်\n\n"
+                "🔹 အမျိုးအစားများ: mytel_mb, mytel_min, atom_mb, mytel_plan, atom_plan\n"
+                "🔹 App အမည်များ: agent, myid, mbccs, eagle\n\n"
                 "ဥပမာ -\n"
-                "/addpkg m3 mytel_mb 1800 2GB (5 Days)"
+                "/addpkg m3 mytel_mb agent 1800 2GB (5 Days)"
             )
             bot.reply_to(message, msg)
             return
 
         code = raw_parts[1].lower()
         cat = raw_parts[2].lower()
+        app_key = raw_parts[3].lower()
         try:
-            price = int(raw_parts[3])
+            price = int(raw_parts[4])
         except ValueError:
             bot.reply_to(message, "⚠️ ဈေးနှုန်းနေရာတွင် ဂဏန်းသီးသန့် ရိုက်ပါ။")
             return
-        name = raw_parts[4]
+        name = raw_parts[5]
+
+        app_map = {
+            "agent": "Mytel Agent App",
+            "myid": "Mytel App",
+            "mbccs": "Mytel MBCCS App",
+            "eagle": "Eagle App"
+        }
 
         if cat not in CATEGORY_PROVIDERS:
             bot.reply_to(message, "❌ အမျိုးအစား မှားနေပါသည်။ (mytel_mb, mytel_min, atom_mb, mytel_plan, atom_plan ထဲမှ တစ်ခုရွေးပါ)")
             return
 
-        provider = CATEGORY_PROVIDERS[cat]
+        if app_key not in app_map:
+            bot.reply_to(message, "❌ App အမည် မှားနေပါသည်။ (agent, myid, mbccs, eagle ထဲမှ တစ်ခုရွေးပါ)")
+            return
+
+        provider = app_map[app_key]
         new_item = {
             "cat": cat,
             "name": name,
@@ -328,7 +340,32 @@ def handle_all_commands(message):
             "order": int(time.time())
         }
         requests.put(f"{FIREBASE_URL}/packages/{code}.json", json=new_item)
-        bot.reply_to(message, f"✅ Package အသစ် ထပ်တိုးပြီးပါပြီ!\n\n🔹 ကုဒ်: {code}\n📂 အမျိုးအစား: {cat}\n🎁 နာမည်: {name}\n💰 ဈေးနှုန်း: {price:,} Ks")
+        bot.reply_to(message, f"✅ Package အသစ် ထပ်တိုးပြီးပါပြီ!\n\n🔹 ကုဒ်: {code}\n📂 အမျိုးအစား: {cat}\n⚙️ ဝယ်မည့် App: {provider}\n🎁 နာမည်: {name}\n💰 ဈေးနှုန်း: {price:,} Ks")
+
+    elif cmd == '/setapp':
+        if len(parts) < 3:
+            bot.reply_to(message, "⚠️ ဥပမာ - /setapp m1 agent ဟု ရိုက်ပါ။ (agent, myid, mbccs, eagle)")
+            return
+        code = parts[1].lower()
+        app_key = parts[2].lower()
+        app_map = {
+            "agent": "Mytel Agent App",
+            "myid": "Mytel App",
+            "mbccs": "Mytel MBCCS App",
+            "eagle": "Eagle App"
+        }
+        pkgs = get_all_packages()
+        if code not in pkgs:
+            bot.reply_to(message, "❌ ကုဒ်မှားနေပါသည်။ /prices တွင် စစ်ဆေးပါ။")
+            return
+        if app_key not in app_map:
+            bot.reply_to(message, "❌ App အမည်ကို agent, myid, mbccs, eagle ထဲမှ တစ်ခုရွေးပါ။")
+            return
+
+        new_provider = app_map[app_key]
+        requests.patch(f"{FIREBASE_URL}/packages/{code}.json", json={"provider": new_provider})
+        bot.reply_to(message, f"✅ {pkgs[code]['name']} ကို {new_provider} မှ ဝယ်ယူရန် ပြောင်းလဲပြီးပါပြီ!")
+)
 
     elif cmd == '/delpkg':
         if len(parts) < 2:
