@@ -7,7 +7,7 @@ from flask_cors import CORS
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# ================= CONFIG (မင်းရဲ့ Token နဲ့ Chat ID ဒီမှာထည့်ပါ) =================
+# ================= CONFIG (မင်းရဲ့ Token နဲ့ Chat ID ဒီမှာ သေချာပြန်ထည့်ပါ) =================
 BOT_TOKEN = "9232024866:AAGdO3i-s20H16KkLifls500wVmWb5AK_ZA"
 ADMIN_CHAT_ID = "7102568821"
 
@@ -18,7 +18,6 @@ bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 CORS(app)
 
-# မူလ Package နှင့် ဈေးနှုန်းများ
 DEFAULT_PACKAGES = {
     "m1": {"cat": "mytel_mb", "name": "1GB (3 Days)", "price": 930, "provider": "Mytel Agent App", "order": 1},
     "m2": {"cat": "mytel_min", "name": "100 Min (30 Days)", "price": 800, "provider": "Mytel App", "order": 2},
@@ -30,7 +29,6 @@ DEFAULT_PACKAGES = {
     "ap2": {"cat": "atom_plan", "name": "135GB Plan", "price": 28000, "provider": "Eagle App", "order": 8}
 }
 
-# အမျိုးအစားအလိုက် Auto ဝယ်မည့် App သတ်မှတ်ချက်
 CATEGORY_PROVIDERS = {
     "mytel_mb": "Mytel Agent App",
     "mytel_min": "Mytel App",
@@ -72,7 +70,7 @@ def get_history(phone):
 
 @app.route('/', methods=['GET'])
 def index():
-    return "Telecom Reseller Server V5 is Running 24/7!", 200
+    return "Telecom Reseller Server V6 (Crash-Proof) is Running 24/7!", 200
 
 @app.route('/packages', methods=['GET'])
 def fetch_packages():
@@ -145,14 +143,14 @@ def upload_receipt():
     )
 
     caption = (
-        f"🔔 **ငွေဖြည့်သွင်းမှု အသစ်**\n\n"
-        f"👤 **အကောင့်:** `{user_phone}`\n"
-        f"💳 **Payment:** {method}\n"
-        f"🔢 **နောက်ဆုံး ၆ လုံး:** `{tid}`\n"
-        f"💰 **ပမာဏ:** {amount:,} Ks"
+        f"🔔 ငွေဖြည့်သွင်းမှု အသစ်\n\n"
+        f"👤 အကောင့်: {user_phone}\n"
+        f"💳 Payment: {method}\n"
+        f"🔢 နောက်ဆုံး ၆ လုံး: {tid}\n"
+        f"💰 ပမာဏ: {amount:,} Ks"
     )
 
-    bot.send_photo(ADMIN_CHAT_ID, receipt_img, caption=caption, parse_mode="Markdown", reply_markup=markup)
+    bot.send_photo(ADMIN_CHAT_ID, receipt_img, caption=caption, reply_markup=markup)
     return jsonify({"status": "success", "msg": "ပြေစာပို့ပြီးပါပြီ။ Admin အတည်ပြုပြီးပါက အကောင့်ထဲ ငွေဝင်လာပါမည်။"})
 
 @app.route('/buy_package', methods=['POST'])
@@ -195,179 +193,165 @@ def buy_package():
     )
 
     order_msg = (
-        f"📦 **Package အော်ဒါအသစ် ဝင်ပါသည်**\n\n"
-        f"👤 ဝယ်သူအကောင့်: `{user_phone}`\n"
-        f"📱 ထည့်သွင်းမည့်ဖုန်း: `{target_phone}`\n"
+        f"📦 Package အော်ဒါအသစ် ဝင်ပါသည်\n\n"
+        f"👤 ဝယ်သူအကောင့်: {user_phone}\n"
+        f"📱 ထည့်သွင်းမည့်ဖုန်း: {target_phone}\n"
         f"🎁 Package: {pkg_name}\n"
         f"💵 ကျသင့်ငွေ: {price:,} Ks\n"
         f"⚙️ စနစ်: {provider}"
     )
-    bot.send_message(ADMIN_CHAT_ID, order_msg, parse_mode="Markdown", reply_markup=markup)
+    bot.send_message(ADMIN_CHAT_ID, order_msg, reply_markup=markup)
 
     return jsonify({"status": "success", "msg": "ဝယ်ယူမှု အောင်မြင်ပါသည်။"})
 
-# ================= TELEGRAM ADMIN COMMANDS =================
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
+# ================= TELEGRAM ADMIN COMMANDS (Case-Insensitive & Crash-Proof) =================
+@bot.message_handler(func=lambda m: m.text and m.text.startswith('/'))
+def handle_all_commands(message):
     if str(message.chat.id) != str(ADMIN_CHAT_ID):
         return
-    help_text = (
-        "🛠 **Admin ထိန်းချုပ်ရေး လမ်းညွှန်**\n\n"
-        "1️⃣ **အကောင့်နှင့် Password စစ်ရန်:**\n"
-        "`/check 09xxxxxxxxx`\n\n"
-        "2️⃣ **Password အသစ်ပြောင်းပေးရန်:**\n"
-        "`/setpass 09xxxxxxxxx စကားဝှက်အသစ်`\n\n"
-        "3️⃣ **Package စာရင်းနှင့် ကုဒ်များကြည့်ရန်:**\n"
-        "`/prices`\n\n"
-        "4️⃣ **Package ဈေးနှုန်း ပြောင်းရန်:**\n"
-        "`/setprice ကုဒ် ဈေးနှုန်းအသစ်`\n"
-        "*(ဥပမာ - `/setprice m1 950`)*\n\n"
-        "5️⃣ **Package အသစ် ထပ်တိုးရန်:**\n"
-        "`/addpkg ကုဒ် အမျိုးအစား ဈေးနှုန်း နာမည်`\n"
-        "*(ဥပမာ - `/addpkg m3 mytel_mb 1800 2GB (5 Days)`)*\n\n"
-        "6️⃣ **Package ပြန်ဖျက်ရန်:**\n"
-        "`/delpkg ကုဒ်`\n"
-        "*(ဥပမာ - `/delpkg m3`)*"
-    )
-    bot.reply_to(message, help_text, parse_mode="Markdown")
 
-@bot.message_handler(commands=['check'])
-def check_user_cmd(message):
-    if str(message.chat.id) != str(ADMIN_CHAT_ID):
-        return
-    parts = message.text.split()
-    if len(parts) < 2:
-        bot.reply_to(message, "⚠️ ဖုန်းနံပါတ် ထည့်ရိုက်ပါ။ ဥပမာ - `/check 09688022655`", parse_mode="Markdown")
-        return
-    phone = parts[1]
-    user = get_user(phone)
-    if not user:
-        bot.reply_to(message, "❌ ဤဖုန်းနံပါတ်ဖြင့် အကောင့်မရှိပါ။")
-    else:
-        msg = (
-            f"👤 **အကောင့် အချက်အလက်**\n\n"
-            f"📱 ဖုန်းနံပါတ်: `{phone}`\n"
-            f"🔑 Password: `{user.get('password')}`\n"
-            f"💰 လက်ကျန်ငွေ: {user.get('balance', 0):,} Ks"
+    parts = message.text.strip().split()
+    cmd = parts[0].lower()
+
+    if cmd in ['/start', '/help']:
+        help_text = (
+            "🛠 Admin ထိန်းချုပ်ရေး လမ်းညွှန်\n\n"
+            "1️⃣ အကောင့်နှင့် Password စစ်ရန်:\n"
+            "/check 09xxxxxxxxx\n\n"
+            "2️⃣ Password အသစ်ပြောင်းပေးရန်:\n"
+            "/setpass 09xxxxxxxxx စကားဝှက်အသစ်\n\n"
+            "3️⃣ Package စာရင်းနှင့် ကုဒ်များကြည့်ရန်:\n"
+            "/prices\n\n"
+            "4️⃣ Package ဈေးနှုန်း ပြောင်းရန်:\n"
+            "/setprice ကုဒ် ဈေးနှုန်းအသစ်\n"
+            "(ဥပမာ - /setprice m1 950)\n\n"
+            "5️⃣ Package အသစ် ထပ်တိုးရန်:\n"
+            "/addpkg ကုဒ် အမျိုးအစား ဈေးနှုန်း နာမည်\n"
+            "(ဥပမာ - /addpkg m3 mytel_mb 1800 2GB 5Days)\n\n"
+            "6️⃣ Package ပြန်ဖျက်ရန်:\n"
+            "/delpkg ကုဒ်\n"
+            "(ဥပမာ - /delpkg m3)"
         )
-        bot.reply_to(message, msg, parse_mode="Markdown")
+        bot.reply_to(message, help_text)
 
-@bot.message_handler(commands=['setpass'])
-def setpass_cmd(message):
-    if str(message.chat.id) != str(ADMIN_CHAT_ID):
-        return
-    parts = message.text.split()
-    if len(parts) < 3:
-        bot.reply_to(message, "⚠️ ဥပမာ - `/setpass 09688022655 123456` ဟု ရိုက်ပါ။", parse_mode="Markdown")
-        return
-    phone, new_pass = parts[1], parts[2]
-    user = get_user(phone)
-    if not user:
-        bot.reply_to(message, "❌ ဤဖုန်းနံပါတ်ဖြင့် အကောင့်မရှိပါ။")
-    else:
-        save_user(phone, {"password": new_pass})
-        bot.reply_to(message, f"✅ `{phone}` ၏ Password ကို `{new_pass}` သို့ ပြောင်းလဲပြီးပါပြီ။", parse_mode="Markdown")
+    elif cmd == '/check':
+        if len(parts) < 2:
+            bot.reply_to(message, "⚠️ ဖုန်းနံပါတ် ထည့်ရိုက်ပါ။ ဥပမာ - /check 09688022655")
+            return
+        phone = parts[1]
+        user = get_user(phone)
+        if not user:
+            bot.reply_to(message, "❌ ဤဖုန်းနံပါတ်ဖြင့် အကောင့်မရှိပါ။")
+        else:
+            msg = (
+                f"👤 အကောင့် အချက်အလက်\n\n"
+                f"📱 ဖုန်းနံပါတ်: {phone}\n"
+                f"🔑 Password: {user.get('password')}\n"
+                f"💰 လက်ကျန်ငွေ: {user.get('balance', 0):,} Ks"
+            )
+            bot.reply_to(message, msg)
 
-@bot.message_handler(commands=['prices'])
-def list_prices_cmd(message):
-    if str(message.chat.id) != str(ADMIN_CHAT_ID):
-        return
-    pkgs = get_all_packages()
-    lines = ["📋 **လက်ရှိ Package စာရင်းနှင့် ကုဒ်များ**\n"]
-    for code, info in sorted(pkgs.items(), key=lambda x: x[1].get('order', 99)):
-        lines.append(f"🔹 `{code}` ({info['cat']}) : {info['name']} = **{info['price']:,} Ks**")
-    lines.append("\n💡 *ဈေးပြောင်းရန် -* `/setprice m1 950`")
-    lines.append("➕ *အသစ်တိုးရန် -* `/addpkg m3 mytel_mb 1800 2GB (5D)`")
-    lines.append("🗑 *ပြန်ဖျက်ရန် -* `/delpkg m3`")
-    bot.reply_to(message, "\n".join(lines), parse_mode="Markdown")
+    elif cmd == '/setpass':
+        if len(parts) < 3:
+            bot.reply_to(message, "⚠️ ဥပမာ - /setpass 09688022655 123456 ဟု ရိုက်ပါ။")
+            return
+        phone, new_pass = parts[1], parts[2]
+        user = get_user(phone)
+        if not user:
+            bot.reply_to(message, "❌ ဤဖုန်းနံပါတ်ဖြင့် အကောင့်မရှိပါ။")
+        else:
+            save_user(phone, {"password": new_pass})
+            bot.reply_to(message, f"✅ {phone} ၏ Password ကို {new_pass} သို့ ပြောင်းလဲပြီးပါပြီ။")
 
-@bot.message_handler(commands=['setprice'])
-def set_price_cmd(message):
-    if str(message.chat.id) != str(ADMIN_CHAT_ID):
-        return
-    parts = message.text.split()
-    if len(parts) < 3:
-        bot.reply_to(message, "⚠️ ဥပမာ - `/setprice m1 950` ဟု ရိုက်ပါ။", parse_mode="Markdown")
-        return
-    code = parts[1].lower()
-    try:
-        new_price = int(parts[2])
-    except ValueError:
-        bot.reply_to(message, "⚠️ ဈေးနှုန်းကို ဂဏန်းဖြင့်သာ ရိုက်ပါ။")
-        return
+    elif cmd in ['/prices', '/price']:
+        pkgs = get_all_packages()
+        lines = ["📋 လက်ရှိ Package စာရင်းနှင့် ကုဒ်များ\n"]
+        for code, info in sorted(pkgs.items(), key=lambda x: x[1].get('order', 99)):
+            lines.append(f"🔹 {code} ({info['cat']}) : {info['name']} = {info['price']:,} Ks")
+        lines.append("\n💡 ဈေးပြောင်းရန် - /setprice m1 950")
+        lines.append("➕ အသစ်တိုးရန် - /addpkg m3 mytel_mb 1800 2GB (5D)")
+        lines.append("🗑 ပြန်ဖျက်ရန် - /delpkg m3")
+        bot.reply_to(message, "\n".join(lines))
 
-    pkgs = get_all_packages()
-    if code not in pkgs:
-        bot.reply_to(message, "❌ ကုဒ်မှားနေပါသည်။ `/prices` ဟုရိုက်ပြီး ကုဒ်များကို စစ်ဆေးပါ။", parse_mode="Markdown")
-        return
+    elif cmd == '/setprice':
+        if len(parts) < 3:
+            bot.reply_to(message, "⚠️ ဥပမာ - /setprice m1 950 ဟု ရိုက်ပါ။")
+            return
+        code = parts[1].lower()
+        try:
+            new_price = int(parts[2])
+        except ValueError:
+            bot.reply_to(message, "⚠️ ဈေးနှုန်းကို ဂဏန်းဖြင့်သာ ရိုက်ပါ။")
+            return
 
-    requests.patch(f"{FIREBASE_URL}/packages/{code}.json", json={"price": new_price})
-    bot.reply_to(message, f"✅ **{pkgs[code]['name']}** ဈေးနှုန်းကို **{new_price:,} Ks** သို့ ပြောင်းလဲပြီးပါပြီ!", parse_mode="Markdown")
+        pkgs = get_all_packages()
+        if code not in pkgs:
+            bot.reply_to(message, "❌ ကုဒ်မှားနေပါသည်။ /prices ဟုရိုက်ပြီး ကုဒ်များကို စစ်ဆေးပါ။")
+            return
 
-@bot.message_handler(commands=['addpkg'])
-def add_pkg_cmd(message):
-    if str(message.chat.id) != str(ADMIN_CHAT_ID):
-        return
-    parts = message.text.split(maxsplit=4)
-    if len(parts) < 5:
-        msg = (
-            "⚠️ **ပုံစံမှားနေပါသည်။ အောက်ပါအတိုင်း ရိုက်ပါ -**\n"
-            "`/addpkg ကုဒ် အမျိုးအစား ဈေးနှုန်း နာမည်`\n\n"
-            "**အမျိုးအစား (၅) ခု:**\n"
-            "`mytel_mb`, `mytel_min`, `atom_mb`, `mytel_plan`, `atom_plan`\n\n"
-            "**ဥပမာ -**\n"
-            "`/addpkg m3 mytel_mb 1800 2GB (5 Days)`"
-        )
-        bot.reply_to(message, msg, parse_mode="Markdown")
-        return
+        requests.patch(f"{FIREBASE_URL}/packages/{code}.json", json={"price": new_price})
+        bot.reply_to(message, f"✅ {pkgs[code]['name']} ဈေးနှုန်းကို {new_price:,} Ks သို့ ပြောင်းလဲပြီးပါပြီ!")
 
-    code = parts[1].lower()
-    cat = parts[2].lower()
-    try:
-        price = int(parts[3])
-    except ValueError:
-        bot.reply_to(message, "⚠️ ဈေးနှုန်းနေရာတွင် ဂဏန်းသီးသန့် ရိုက်ပါ။")
-        return
-    name = parts[4]
+    elif cmd == '/addpkg':
+        raw_parts = message.text.strip().split(maxsplit=4)
+        if len(raw_parts) < 5:
+            msg = (
+                "⚠️ ပုံစံမှားနေပါသည်။ အောက်ပါအတိုင်း ရိုက်ပါ -\n"
+                "/addpkg ကုဒ် အမျိုးအစား ဈေးနှုန်း နာမည်\n\n"
+                "အမျိုးအစား (၅) ခု:\n"
+                "mytel_mb, mytel_min, atom_mb, mytel_plan, atom_plan\n\n"
+                "ဥပမာ -\n"
+                "/addpkg m3 mytel_mb 1800 2GB (5 Days)"
+            )
+            bot.reply_to(message, msg)
+            return
 
-    if cat not in CATEGORY_PROVIDERS:
-        bot.reply_to(message, "❌ အမျိုးအစား မှားနေပါသည်။ (`mytel_mb`, `mytel_min`, `atom_mb`, `mytel_plan`, `atom_plan` ထဲမှ တစ်ခုရွေးပါ)", parse_mode="Markdown")
-        return
+        code = raw_parts[1].lower()
+        cat = raw_parts[2].lower()
+        try:
+            price = int(raw_parts[3])
+        except ValueError:
+            bot.reply_to(message, "⚠️ ဈေးနှုန်းနေရာတွင် ဂဏန်းသီးသန့် ရိုက်ပါ။")
+            return
+        name = raw_parts[4]
 
-    provider = CATEGORY_PROVIDERS[cat]
-    new_item = {
-        "cat": cat,
-        "name": name,
-        "price": price,
-        "provider": provider,
-        "order": int(time.time())
-    }
-    requests.put(f"{FIREBASE_URL}/packages/{code}.json", json=new_item)
-    bot.reply_to(message, f"✅ **Package အသစ် ထပ်တိုးပြီးပါပြီ!**\n\n🔹 ကုဒ်: `{code}`\n📂 အမျိုးအစား: `{cat}`\n🎁 နာမည်: **{name}**\n💰 ဈေးနှုန်း: **{price:,} Ks**", parse_mode="Markdown")
+        if cat not in CATEGORY_PROVIDERS:
+            bot.reply_to(message, "❌ အမျိုးအစား မှားနေပါသည်။ (mytel_mb, mytel_min, atom_mb, mytel_plan, atom_plan ထဲမှ တစ်ခုရွေးပါ)")
+            return
 
-@bot.message_handler(commands=['delpkg'])
-def del_pkg_cmd(message):
-    if str(message.chat.id) != str(ADMIN_CHAT_ID):
-        return
-    parts = message.text.split()
-    if len(parts) < 2:
-        bot.reply_to(message, "⚠️ ဖျက်လိုသော ကုဒ်ကို ထည့်ရိုက်ပါ။ ဥပမာ - `/delpkg m3`", parse_mode="Markdown")
-        return
-    code = parts[1].lower()
-    pkgs = get_all_packages()
-    if code not in pkgs:
-        bot.reply_to(message, "❌ ၎င်းကုဒ်ဖြင့် Package မရှိပါ။ `/prices` တွင် စစ်ဆေးပါ။", parse_mode="Markdown")
-        return
+        provider = CATEGORY_PROVIDERS[cat]
+        new_item = {
+            "cat": cat,
+            "name": name,
+            "price": price,
+            "provider": provider,
+            "order": int(time.time())
+        }
+        requests.put(f"{FIREBASE_URL}/packages/{code}.json", json=new_item)
+        bot.reply_to(message, f"✅ Package အသစ် ထပ်တိုးပြီးပါပြီ!\n\n🔹 ကုဒ်: {code}\n📂 အမျိုးအစား: {cat}\n🎁 နာမည်: {name}\n💰 ဈေးနှုန်း: {price:,} Ks")
 
-    pkg_name = pkgs[code].get('name', code)
-    requests.delete(f"{FIREBASE_URL}/packages/{code}.json")
-    bot.reply_to(message, f"🗑 **{pkg_name}** (`{code}`) ကို စာရင်းမှ ဖျက်လိုက်ပါပြီ!", parse_mode="Markdown")
+    elif cmd == '/delpkg':
+        if len(parts) < 2:
+            bot.reply_to(message, "⚠️ ဖျက်လိုသော ကုဒ်ကို ထည့်ရိုက်ပါ။ ဥပမာ - /delpkg m3")
+            return
+        code = parts[1].lower()
+        pkgs = get_all_packages()
+        if code not in pkgs:
+            bot.reply_to(message, "❌ ၎င်းကုဒ်ဖြင့် Package မရှိပါ။ /prices တွင် စစ်ဆေးပါ။")
+            return
+
+        pkg_name = pkgs[code].get('name', code)
+        requests.delete(f"{FIREBASE_URL}/packages/{code}.json")
+        bot.reply_to(message, f"🗑 {pkg_name} ({code}) ကို စာရင်းမှ ဖျက်လိုက်ပါပြီ!")
 
 @app.route('/webhook', methods=['POST'])
 def telegram_webhook():
-    json_str = request.get_data().decode('UTF-8')
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
+    try:
+        json_str = request.get_data().decode('UTF-8')
+        update = telebot.types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+    except Exception as e:
+        print("Webhook Error:", e)
     return "OK", 200
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -408,7 +392,7 @@ def callback_query(call):
             add_history(user_phone, f"ord_{ts}", {"status": "🔄 ငွေပြန်အမ်းပြီး (Refunded)", "type": "topup"})
 
             bot.answer_callback_query(call.id, "🔄 ဝယ်သူ့အကောင့်ထဲ ငွေပြန်အမ်းပေးပြီးပါပြီ!")
-            new_text = f"{call.message.text}\n\n🔄 **ငွေပြန်အမ်းပြီး ({price:,} Ks ပြန်ထည့်ပေးပြီးပါပြီ)**"
+            new_text = f"{call.message.text}\n\n🔄 ငွေပြန်အမ်းပြီး ({price:,} Ks ပြန်ထည့်ပေးပြီးပါပြီ)"
             bot.edit_message_text(text=new_text, chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     except Exception as e:
@@ -417,8 +401,9 @@ def callback_query(call):
 @app.route('/set_webhook')
 def set_webhook():
     bot.remove_webhook()
-    bot.set_webhook(url=f"{WEB_URL}/webhook")
-    return "Webhook ချိတ်ဆက်မှု အောင်မြင်ပါပြီ!"
+    time.sleep(1)
+    bot.set_webhook(url=f"{WEB_URL}/webhook", drop_pending_updates=True)
+    return "Webhook အသစ်ပြန်လည်ချိတ်ဆက်ပြီး ပိတ်နေသောစာများကို ရှင်းလင်းပြီးပါပြီ!"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
