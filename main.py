@@ -18,6 +18,7 @@ bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 CORS(app)
 
+# မူလ Package နှင့် ဈေးနှုန်းများ
 DEFAULT_PACKAGES = {
     "m1": {"cat": "mytel_mb", "name": "1GB (3 Days)", "price": 930, "provider": "Mytel Agent App", "order": 1},
     "m2": {"cat": "mytel_min", "name": "100 Min (30 Days)", "price": 800, "provider": "Mytel App", "order": 2},
@@ -29,12 +30,13 @@ DEFAULT_PACKAGES = {
     "ap2": {"cat": "atom_plan", "name": "135GB Plan", "price": 28000, "provider": "Eagle App", "order": 8}
 }
 
-CATEGORY_PROVIDERS = {
-    "mytel_mb": "Mytel Agent App",
-    "mytel_min": "Mytel App",
-    "mytel_plan": "Mytel MBCCS App",
-    "atom_mb": "Eagle App",
-    "atom_plan": "Eagle App"
+VALID_CATEGORIES = ["mytel_mb", "mytel_min", "atom_mb", "mytel_plan", "atom_plan"]
+
+APP_MAP = {
+    "agent": "Mytel Agent App",
+    "myid": "Mytel App",
+    "mbccs": "Mytel MBCCS App",
+    "eagle": "Eagle App"
 }
 
 def get_mm_time():
@@ -70,7 +72,7 @@ def get_history(phone):
 
 @app.route('/', methods=['GET'])
 def index():
-    return "Telecom Reseller Server V6 (Crash-Proof) is Running 24/7!", 200
+    return "Telecom Reseller Server V7 (Full Admin Control) is Running 24/7!", 200
 
 @app.route('/packages', methods=['GET'])
 def fetch_packages():
@@ -204,7 +206,7 @@ def buy_package():
 
     return jsonify({"status": "success", "msg": "ဝယ်ယူမှု အောင်မြင်ပါသည်။"})
 
-# ================= TELEGRAM ADMIN COMMANDS (Case-Insensitive & Crash-Proof) =================
+# ================= TELEGRAM ADMIN COMMANDS =================
 @bot.message_handler(func=lambda m: m.text and m.text.startswith('/'))
 def handle_all_commands(message):
     if str(message.chat.id) != str(ADMIN_CHAT_ID):
@@ -226,11 +228,19 @@ def handle_all_commands(message):
             "/setprice ကုဒ် ဈေးနှုန်းအသစ်\n"
             "(ဥပမာ - /setprice m1 950)\n\n"
             "5️⃣ Package အသစ် ထပ်တိုးရန်:\n"
-            "/addpkg ကုဒ် အမျိုးအစား ဈေးနှုန်း နာမည်\n"
-            "(ဥပမာ - /addpkg m3 mytel_mb 1800 2GB 5Days)\n\n"
-            "6️⃣ Package ပြန်ဖျက်ရန်:\n"
+            "/addpkg ကုဒ် အမျိုးအစား Appအမည် ဈေးနှုန်း နာမည်\n"
+            "(ဥပမာ - /addpkg m3 mytel_mb agent 1800 2GB 5Days)\n\n"
+            "6️⃣ ဝယ်မည့် App ပြောင်းရန်:\n"
+            "/setapp ကုဒ် Appအမည်\n"
+            "(ဥပမာ - /setapp m1 myid)\n\n"
+            "7️⃣ Package ပြန်ဖျက်ရန်:\n"
             "/delpkg ကုဒ်\n"
-            "(ဥပမာ - /delpkg m3)"
+            "(ဥပမာ - /delpkg m3)\n\n"
+            "📌 App အမည် အတိုကောက်များ:\n"
+            "agent = Mytel Agent App\n"
+            "myid = Mytel App (MyID)\n"
+            "mbccs = Mytel MBCCS App\n"
+            "eagle = Eagle App"
         )
         bot.reply_to(message, help_text)
 
@@ -267,9 +277,10 @@ def handle_all_commands(message):
         pkgs = get_all_packages()
         lines = ["📋 လက်ရှိ Package စာရင်းနှင့် ကုဒ်များ\n"]
         for code, info in sorted(pkgs.items(), key=lambda x: x[1].get('order', 99)):
-            lines.append(f"🔹 {code} ({info['cat']}) : {info['name']} = {info['price']:,} Ks")
+            lines.append(f"🔹 {code} ({info['cat']})\n   {info['name']} = {info['price']:,} Ks\n   ⚙️ [{info.get('provider', 'App')}]")
         lines.append("\n💡 ဈေးပြောင်းရန် - /setprice m1 950")
-        lines.append("➕ အသစ်တိုးရန် - /addpkg m3 mytel_mb 1800 2GB (5D)")
+        lines.append("⚙️ App ပြောင်းရန် - /setapp m1 myid")
+        lines.append("➕ အသစ်တိုးရန် - /addpkg m3 mytel_mb agent 1800 2GB (5D)")
         lines.append("🗑 ပြန်ဖျက်ရန် - /delpkg m3")
         bot.reply_to(message, "\n".join(lines))
 
@@ -292,14 +303,16 @@ def handle_all_commands(message):
         requests.patch(f"{FIREBASE_URL}/packages/{code}.json", json={"price": new_price})
         bot.reply_to(message, f"✅ {pkgs[code]['name']} ဈေးနှုန်းကို {new_price:,} Ks သို့ ပြောင်းလဲပြီးပါပြီ!")
 
-        elif cmd == '/addpkg':
+    elif cmd == '/addpkg':
         raw_parts = message.text.strip().split(maxsplit=5)
         if len(raw_parts) < 6:
             msg = (
                 "⚠️ ပုံစံမှားနေပါသည်။ အောက်ပါအတိုင်း ရိုက်ပါ -\n"
                 "/addpkg ကုဒ် အမျိုးအစား Appအမည် ဈေးနှုန်း နာမည်\n\n"
-                "🔹 အမျိုးအစားများ: mytel_mb, mytel_min, atom_mb, mytel_plan, atom_plan\n"
-                "🔹 App အမည်များ: agent, myid, mbccs, eagle\n\n"
+                "🔹 အမျိုးအစား (၅) ခု:\n"
+                "mytel_mb, mytel_min, atom_mb, mytel_plan, atom_plan\n\n"
+                "🔹 App အမည် (၄) ခု:\n"
+                "agent, myid, mbccs, eagle\n\n"
                 "ဥပမာ -\n"
                 "/addpkg m3 mytel_mb agent 1800 2GB (5 Days)"
             )
@@ -316,22 +329,15 @@ def handle_all_commands(message):
             return
         name = raw_parts[5]
 
-        app_map = {
-            "agent": "Mytel Agent App",
-            "myid": "Mytel App",
-            "mbccs": "Mytel MBCCS App",
-            "eagle": "Eagle App"
-        }
-
-        if cat not in CATEGORY_PROVIDERS:
+        if cat not in VALID_CATEGORIES:
             bot.reply_to(message, "❌ အမျိုးအစား မှားနေပါသည်။ (mytel_mb, mytel_min, atom_mb, mytel_plan, atom_plan ထဲမှ တစ်ခုရွေးပါ)")
             return
 
-        if app_key not in app_map:
+        if app_key not in APP_MAP:
             bot.reply_to(message, "❌ App အမည် မှားနေပါသည်။ (agent, myid, mbccs, eagle ထဲမှ တစ်ခုရွေးပါ)")
             return
 
-        provider = app_map[app_key]
+        provider = APP_MAP[app_key]
         new_item = {
             "cat": cat,
             "name": name,
@@ -344,28 +350,22 @@ def handle_all_commands(message):
 
     elif cmd == '/setapp':
         if len(parts) < 3:
-            bot.reply_to(message, "⚠️ ဥပမာ - /setapp m1 agent ဟု ရိုက်ပါ။ (agent, myid, mbccs, eagle)")
+            bot.reply_to(message, "⚠️ ဥပမာ - /setapp m1 agent ဟု ရိုက်ပါ။\n(ရွေးနိုင်သော App များ - agent, myid, mbccs, eagle)")
             return
         code = parts[1].lower()
         app_key = parts[2].lower()
-        app_map = {
-            "agent": "Mytel Agent App",
-            "myid": "Mytel App",
-            "mbccs": "Mytel MBCCS App",
-            "eagle": "Eagle App"
-        }
+
         pkgs = get_all_packages()
         if code not in pkgs:
             bot.reply_to(message, "❌ ကုဒ်မှားနေပါသည်။ /prices တွင် စစ်ဆေးပါ။")
             return
-        if app_key not in app_map:
+        if app_key not in APP_MAP:
             bot.reply_to(message, "❌ App အမည်ကို agent, myid, mbccs, eagle ထဲမှ တစ်ခုရွေးပါ။")
             return
 
-        new_provider = app_map[app_key]
+        new_provider = APP_MAP[app_key]
         requests.patch(f"{FIREBASE_URL}/packages/{code}.json", json={"provider": new_provider})
-        bot.reply_to(message, f"✅ {pkgs[code]['name']} ကို {new_provider} မှ ဝယ်ယူရန် ပြောင်းလဲပြီးပါပြီ!")
-)
+        bot.reply_to(message, f"✅ {pkgs[code]['name']} ({code}) ကို {new_provider} မှ ဝယ်ယူရန် ပြောင်းလဲပြီးပါပြီ!")
 
     elif cmd == '/delpkg':
         if len(parts) < 2:
@@ -440,7 +440,7 @@ def set_webhook():
     bot.remove_webhook()
     time.sleep(1)
     bot.set_webhook(url=f"{WEB_URL}/webhook", drop_pending_updates=True)
-    return "Webhook အသစ်ပြန်လည်ချိတ်ဆက်ပြီး ပိတ်နေသောစာများကို ရှင်းလင်းပြီးပါပြီ!"
+    return "Webhook ချိတ်ဆက်မှု အောင်မြင်ပါပြီ!"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
