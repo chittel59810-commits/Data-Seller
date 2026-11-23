@@ -18,7 +18,6 @@ bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 CORS(app)
 
-# မူလ Package နှင့် ဈေးနှုန်းများ
 DEFAULT_PACKAGES = {
     "m1": {"cat": "mytel_mb", "name": "1GB (3 Days)", "price": 930, "provider": "Mytel Agent App", "order": 1},
     "m2": {"cat": "mytel_min", "name": "100 Min (30 Days)", "price": 800, "provider": "Mytel App", "order": 2},
@@ -39,8 +38,11 @@ APP_MAP = {
     "eagle": "Eagle App"
 }
 
+def get_mm_now():
+    return datetime.utcnow() + timedelta(hours=6, minutes=30)
+
 def get_mm_time():
-    return (datetime.utcnow() + timedelta(hours=6, minutes=30)).strftime("%d/%m/%Y %I:%M %p")
+    return get_mm_now().strftime("%d/%m/%Y %I:%M %p")
 
 def get_user(phone):
     res = requests.get(f"{FIREBASE_URL}/users/{phone}.json")
@@ -72,7 +74,7 @@ def get_history(phone):
 
 @app.route('/', methods=['GET'])
 def index():
-    return "Telecom Reseller Server V7 (Full Admin Control) is Running 24/7!", 200
+    return "Telecom Reseller Server V9 (Time Limit + 1-Click Semi-Auto) is Running 24/7!", 200
 
 @app.route('/packages', methods=['GET'])
 def fetch_packages():
@@ -145,18 +147,26 @@ def upload_receipt():
     )
 
     caption = (
-        f"🔔 ငွေဖြည့်သွင်းမှု အသစ်\n\n"
-        f"👤 အကောင့်: {user_phone}\n"
+        f"🔔 <b>ငွေဖြည့်သွင်းမှု အသစ်</b>\n\n"
+        f"👤 အကောင့်: <code>{user_phone}</code>\n"
         f"💳 Payment: {method}\n"
-        f"🔢 နောက်ဆုံး ၆ လုံး: {tid}\n"
-        f"💰 ပမာဏ: {amount:,} Ks"
+        f"🔢 နောက်ဆုံး ၆ လုံး: <code>{tid}</code>\n"
+        f"💰 ပမာဏ: <b>{amount:,} Ks</b>"
     )
 
-    bot.send_photo(ADMIN_CHAT_ID, receipt_img, caption=caption, reply_markup=markup)
+    bot.send_photo(ADMIN_CHAT_ID, receipt_img, caption=caption, parse_mode="HTML", reply_markup=markup)
     return jsonify({"status": "success", "msg": "ပြေစာပို့ပြီးပါပြီ။ Admin အတည်ပြုပြီးပါက အကောင့်ထဲ ငွေဝင်လာပါမည်။"})
 
 @app.route('/buy_package', methods=['POST'])
 def buy_package():
+    # မြန်မာစံတော်ချိန် စစ်ဆေးခြင်း (မနက် 7:00 မှ ည 7:00 အတွင်းသာ ခွင့်ပြုမည်)
+    mm_now = get_mm_now()
+    if mm_now.hour < 7 or mm_now.hour >= 19:
+        return jsonify({
+            "status": "error",
+            "msg": "⏰ ဆိုင်ပိတ်ချိန် ဖြစ်ပါသည်။ Order လက်ခံချိန် (မနက် 7:00 မှ ည 7:00 အတွင်း) မှ ပြန်လည်ဝယ်ယူပေးပါ။"
+        })
+
     data = request.json
     user_phone = data.get('user_phone')
     target_phone = data.get('target_phone', '').strip()
@@ -184,27 +194,29 @@ def buy_package():
         "type": "buy",
         "title": f"{pkg_name} -> {target_phone}",
         "amount": price,
-        "status": "✅ ဝယ်ယူပြီး",
+        "status": "⏳ ပို့ဆောင်နေဆဲ",
         "time": get_mm_time(),
         "timestamp": ts
     })
 
     markup = InlineKeyboardMarkup()
-    markup.add(
-        InlineKeyboardButton("🔄 ငွေပြန်အမ်းမည် (Refund)", callback_data=f"refund_{user_phone}_{price}_{ts}")
+    markup.row(
+        InlineKeyboardButton("✅ ပို့ပြီး (Done)", callback_data=f"done_{user_phone}_{ts}"),
+        InlineKeyboardButton("🔄 ငွေပြန်အမ်း (Refund)", callback_data=f"refund_{user_phone}_{price}_{ts}")
     )
 
     order_msg = (
-        f"📦 Package အော်ဒါအသစ် ဝင်ပါသည်\n\n"
-        f"👤 ဝယ်သူအကောင့်: {user_phone}\n"
-        f"📱 ထည့်သွင်းမည့်ဖုန်း: {target_phone}\n"
-        f"🎁 Package: {pkg_name}\n"
-        f"💵 ကျသင့်ငွေ: {price:,} Ks\n"
-        f"⚙️ စနစ်: {provider}"
+        f"📦 <b>Package အော်ဒါအသစ် ဝင်ပါသည်</b>\n\n"
+        f"📱 ထည့်ပေးရမည့်ဖုန်း (နှိပ်၍ Copy ယူပါ):\n"
+        f"👉 <code>{target_phone}</code>\n\n"
+        f"🎁 Package: <b>{pkg_name}</b>\n"
+        f"⚙️ ဝယ်ရမည့် App: <b>{provider}</b>\n"
+        f"💵 ဖြတ်ထားသောငွေ: {price:,} Ks\n"
+        f"👤 ဝယ်သူအကောင့်: <code>{user_phone}</code>"
     )
-    bot.send_message(ADMIN_CHAT_ID, order_msg, reply_markup=markup)
+    bot.send_message(ADMIN_CHAT_ID, order_msg, parse_mode="HTML", reply_markup=markup)
 
-    return jsonify({"status": "success", "msg": "ဝယ်ယူမှု အောင်မြင်ပါသည်။"})
+    return jsonify({"status": "success", "msg": "အော်ဒါတင်ပြီးပါပြီ။ မကြာမီ သင့်ဖုန်းသို့ Package ရောက်ရှိလာပါမည်။"})
 
 # ================= TELEGRAM ADMIN COMMANDS =================
 @bot.message_handler(func=lambda m: m.text and m.text.startswith('/'))
@@ -254,12 +266,12 @@ def handle_all_commands(message):
             bot.reply_to(message, "❌ ဤဖုန်းနံပါတ်ဖြင့် အကောင့်မရှိပါ။")
         else:
             msg = (
-                f"👤 အကောင့် အချက်အလက်\n\n"
-                f"📱 ဖုန်းနံပါတ်: {phone}\n"
-                f"🔑 Password: {user.get('password')}\n"
-                f"💰 လက်ကျန်ငွေ: {user.get('balance', 0):,} Ks"
+                f"👤 <b>အကောင့် အချက်အလက်</b>\n\n"
+                f"📱 ဖုန်းနံပါတ်: <code>{phone}</code>\n"
+                f"🔑 Password: <code>{user.get('password')}</code>\n"
+                f"💰 လက်ကျန်ငွေ: <b>{user.get('balance', 0):,} Ks</b>"
             )
-            bot.reply_to(message, msg)
+            bot.reply_to(message, msg, parse_mode="HTML")
 
     elif cmd == '/setpass':
         if len(parts) < 3:
@@ -419,6 +431,14 @@ def callback_query(call):
             new_caption = f"{call.message.caption}\n\n❌ ငြင်းပယ်လိုက်ပါသည်"
             bot.edit_message_caption(caption=new_caption, chat_id=call.message.chat.id, message_id=call.message.message_id)
 
+        elif action == "done":
+            ts = data[2]
+            add_history(user_phone, f"ord_{ts}", {"status": "✅ ဝယ်ယူပြီး"})
+
+            bot.answer_callback_query(call.id, "✅ ပို့ဆောင်ပြီးကြောင်း မှတ်သားလိုက်ပါပြီ!")
+            new_text = f"{call.message.text}\n\n✅ <b>ပို့ဆောင်ပြီး (Done)</b> - {get_mm_time()}"
+            bot.edit_message_text(text=new_text, chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="HTML")
+
         elif action == "refund":
             price = int(data[2])
             ts = data[3]
@@ -429,8 +449,8 @@ def callback_query(call):
             add_history(user_phone, f"ord_{ts}", {"status": "🔄 ငွေပြန်အမ်းပြီး (Refunded)", "type": "topup"})
 
             bot.answer_callback_query(call.id, "🔄 ဝယ်သူ့အကောင့်ထဲ ငွေပြန်အမ်းပေးပြီးပါပြီ!")
-            new_text = f"{call.message.text}\n\n🔄 ငွေပြန်အမ်းပြီး ({price:,} Ks ပြန်ထည့်ပေးပြီးပါပြီ)"
-            bot.edit_message_text(text=new_text, chat_id=call.message.chat.id, message_id=call.message.message_id)
+            new_text = f"{call.message.text}\n\n🔄 <b>ငွေပြန်အမ်းပြီး ({price:,} Ks ပြန်ထည့်ပေးပြီးပါပြီ)</b>"
+            bot.edit_message_text(text=new_text, chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="HTML")
 
     except Exception as e:
         bot.answer_callback_query(call.id, f"Error: {str(e)}", show_alert=True)
