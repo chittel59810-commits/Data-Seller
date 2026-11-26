@@ -16,6 +16,7 @@ MLBB_ADMIN_ID = "7102568821"
 
 FIREBASE_URL = "https://dataseller-e4c0e-default-rtdb.firebaseio.com"
 WEB_URL = "https://data-seller-7pfm.onrender.com"
+APK_DIRECT_URL = "https://github.com/chittel59810-commits/Data-Seller/releases/download/v1.0/Easy.Data.apk"
 
 data_bot = telebot.TeleBot(DATA_BOT_TOKEN, threaded=False)
 mlbb_bot = telebot.TeleBot(MLBB_BOT_TOKEN, threaded=False)
@@ -97,7 +98,6 @@ def get_history(phone, limit=25):
         return items[:limit]
     return []
 
-# Admin ဘက်မှ User History စစ်ဆေးရန် Helper Function
 def format_user_history_for_admin(phone, filter_mode="all"):
     user = get_user(phone)
     if not user:
@@ -143,14 +143,47 @@ def format_user_history_for_admin(phone, filter_mode="all"):
         result = result[:3950] + "\n... (နောက်ဆုံးမှတ်တမ်းများသာ ပြသထားပါသည်)"
     return result
 
-# ================= WEB & OTA UI ROUTES =================
+# ================= WEB, DOWNLOAD & OTA UI ROUTES =================
 @app.route('/', methods=['GET'])
 def index():
-    return "Easy Data, Exchange, Withdraw & MLBB Arena Server V13 is Running!", 200
+    return "Easy Data, Exchange, Withdraw & MLBB Arena Server V14 is Running!", 200
 
 @app.route('/app', methods=['GET'])
 def serve_app_ui():
     return send_from_directory('.', 'index.html')
+
+@app.route('/download', methods=['GET'])
+def download_page():
+    return f"""
+    <!DOCTYPE html>
+    <html lang="my">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Easy Data App Download</title>
+        <style>
+            body {{ font-family: sans-serif; background: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }}
+            .box {{ background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 380px; width: 100%; }}
+            h2 {{ color: #1a73e8; margin-top: 0; margin-bottom: 8px; }}
+            .btn {{ display: block; background: #28a745; color: white; text-decoration: none; padding: 14px; border-radius: 10px; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }}
+            .guide {{ text-align: left; background: #f8f9fa; padding: 12px; border-radius: 10px; font-size: 12.5px; color: #444; margin-top: 18px; line-height: 1.6; border: 1px solid #e9ecef; }}
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <h2>📲 Easy Data & MLBB App</h2>
+            <p style="color:#555; font-size:14px; margin:0;">Mytel / Atom Data ဝယ်ယူမှု၊ ငွေချိန်း နှင့် MLBB Custom Match App</p>
+            <a class="btn" href="{APK_DIRECT_URL}">⬇️ Download APK (8.66 MB)</a>
+            <div class="guide">
+                <strong>📌 App သွင်းနည်း လမ်းညွှန် -</strong><br>
+                ၁။ အပေါ်က အစိမ်းရောင် <b>Download APK</b> ခလုတ်ကို နှိပ်ပါ။<br>
+                ၂။ ဒေါင်းလုဒ်ပြီးပါက ဖိုင်ကိုဖွင့်ပြီး <b>Install</b> နှိပ်ပါ။<br>
+                ၃။ Google Play Protect ပေါ်လာပါက <b>More details ➔ Install anyway</b> ကို နှိပ်၍ သွင်းနိုင်ပါသည်။
+            </div>
+        </div>
+    </body>
+    </html>
+    """, 200
 
 @app.route('/packages', methods=['GET'])
 def fetch_packages():
