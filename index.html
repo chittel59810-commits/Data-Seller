@@ -1,1 +1,768 @@
 
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy Data & MLBB Arena</title>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; }
+        body { margin: 0; background: #e9ecef; color: #333; }
+        .container { max-width: 420px; margin: 0 auto; background: #f4f6f9; min-height: 100vh; padding-bottom: 85px; box-shadow: 0 0 15px rgba(0,0,0,0.1); position: relative; }
+        
+        /* Notice Bar */
+        .notice-bar { background: linear-gradient(90deg, #ff6b00, #e63946); color: #ffffff; padding: 9px 0; font-size: 13px; font-weight: bold; overflow: hidden; white-space: nowrap; }
+        
+        .inner-pad { padding: 15px; }
+        h2, h3, h4 { text-align: center; color: #1a73e8; margin: 8px 0; }
+        
+        input, select, button { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #ced4da; font-size: 14px; }
+        button { background: #1a73e8; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-secondary { background: #6c757d; }
+        .btn-success { background: #28a745; }
+        .btn-danger { background: #dc3545; }
+        .hidden { display: none !important; }
+
+        /* Wallet Header Card */
+        .wallet-card { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 16px; border-radius: 14px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(26, 115, 232, 0.3); }
+        
+        /* Section Box */
+        .section-box { background: #ffffff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .section-title { font-size: 15px; font-weight: bold; color: #0d47a1; border-bottom: 2px solid #eef6ff; padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+        /* Category & Mode Grid */
+        .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .mode-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+        .cat-btn, .mode-btn { background: #eef6ff; color: #1a73e8; border: 1px solid #cce0ff; padding: 10px 6px; font-size: 13px; margin: 0; }
+        .cat-btn.active, .mode-btn.active { background: #1a73e8; color: #ffffff; border-color: #1a73e8; }
+
+        /* Package Card */
+        .pkg-card { border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #ffffff; }
+        
+        /* Atom Warning */
+        .atom-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px 12px; border-radius: 8px; font-size: 12.5px; margin-top: 10px; line-height: 1.5; }
+
+        /* MLBB Custom Styles */
+        .input-group { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+        .input-group input { margin: 0; }
+        .input-group button { margin: 0; width: 90px; }
+        
+        .autocomplete { position: relative; width: 100%; margin-bottom: 8px; }
+        .autocomplete input { margin: 4px 0; }
+        .autocomplete-items { position: absolute; z-index: 99; top: 100%; left: 0; right: 0; max-height: 160px; overflow-y: auto; background: #ffffff; border: 1px solid #1a73e8; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: none; }
+        .autocomplete-items div { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .autocomplete-items div:hover { background: #eef6ff; color: #1a73e8; font-weight: bold; }
+
+        .rule-list { list-style: none; padding: 0; margin: 0 0 12px 0; }
+        .rule-list li { background: #f8f9fa; padding: 8px 12px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #1a73e8; font-size: 13px; }
+        .delete-btn { color: #dc3545; font-weight: bold; cursor: pointer; padding: 2px 6px; }
+
+        .live-match-card { background: #f8fbff; border: 1px solid #cce0ff; border-left: 5px solid #28a745; padding: 12px; margin-bottom: 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .live-match-info { display: flex; flex-direction: column; gap: 4px; }
+        .accept-btn { background: #28a745; color: white; width: auto; padding: 8px 14px; font-size: 13px; margin: 0; }
+
+        /* Modal Popup */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); }
+        .modal-content { background: #ffffff; margin: 35% auto; padding: 20px; border-radius: 14px; width: 88%; max-width: 360px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+
+        /* Topup & History */
+        .pay-info-card { background: #eef6ff; padding: 12px; border-radius: 10px; border: 1px dashed #1a73e8; margin: 10px 0; font-size: 14px; }
+        .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+        .filter-btn { padding: 8px; font-size: 13px; background: #e9ecef; color: #495057; border-radius: 8px; margin: 0; }
+        .filter-btn.active { background: #1a73e8; color: #fff; }
+        
+        .hist-card { background: #ffffff; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border-left: 5px solid #1a73e8; }
+        .hist-card.topup-type { border-left-color: #28a745; }
+        .hist-card.buy-type { border-left-color: #ff6b00; }
+        .hist-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .hist-badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; display: inline-block; margin-bottom: 4px; }
+        .badge-topup { background: #d4edda; color: #155724; }
+        .badge-buy { background: #ffe8d6; color: #b84400; }
+        .hist-time { font-size: 12px; color: #555; background: #f1f3f5; padding: 5px 8px; border-radius: 6px; margin-top: 6px; display: block; }
+
+        /* Bottom Navigation Bar (4 Tabs) */
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 420px; background: #ffffff; border-top: 1px solid #dee2e6; display: flex; justify-content: space-around; padding: 6px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.08); z-index: 100; }
+        .nav-item { background: none; color: #6c757d; border: none; margin: 0; padding: 6px 2px; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 3px; border-radius: 0; }
+        .nav-item span.icon { font-size: 18px; }
+        .nav-item.active { color: #1a73e8; font-weight: bold; }
+
+        .forgot-link { display: block; text-align: center; margin-top: 12px; color: #dc3545; font-size: 14px; text-decoration: underline; cursor: pointer; }
+        label { font-size: 13px; font-weight: bold; color: #444; display: block; margin-top: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- အပေါ်ဆုံး စာတန်းပြေး -->
+    <div class="notice-bar">
+        <marquee behavior="scroll" direction="left" scrollamount="5">
+            📢 Order ဖွင့်ချိန် - နေ့စဉ် မနက် 7:00 မှ ည 7:00 အထိသာ ဖြစ်ပါသည်။ ⚠️ Atom Data ဝယ်ယူရာတွင် ဘေလ်ချေးထားသော ဖုန်းနံပါတ်များ ထည့်သွင်း၍ မရပါ။ 🎮 MLBB Custom ပွဲများကို မိမိ Wallet လက်ကျန်ငွေဖြင့် တိုက်ရိုက်စိန်ခေါ် ဆော့ကစားနိုင်ပါပြီ!
+        </marquee>
+    </div>
+
+    <div class="inner-pad">
+        <!-- 1. Login / Register Screen -->
+        <div id="auth-screen" class="section-box" style="margin-top: 20px;">
+            <h2 id="auth-title">အကောင့်ဝင်ရန် (Login)</h2>
+            <input type="tel" id="auth-phone" placeholder="ဖုန်းနံပါတ် (ဥပမာ - 09xxxxxxxxx)">
+            <input type="password" id="auth-pass" placeholder="စကားဝှက် (Password)">
+            <button onclick="handleAuth()" id="auth-btn">Login ဝင်မည်</button>
+            <button class="btn-secondary" onclick="toggleAuthMode()" id="toggle-btn">အကောင့်အသစ်ဖွင့်ရန်</button>
+            <span class="forgot-link" onclick="forgotPassword()">🔑 Password မေ့နေပါသလား?</span>
+        </div>
+
+        <!-- 2. Main Dashboard -->
+        <div id="main-screen" class="hidden">
+            
+            <!-- Wallet Card -->
+            <div class="wallet-card">
+                <div>
+                    <small id="user-display">Acc: 09xxxxxxxxx</small>
+                    <h2 style="color:white; margin: 4px 0; text-align:left;" id="balance-display">0 Ks</h2>
+                    <small style="font-size:11px; opacity:0.85;">⚡ Data နှင့် MLBB ပွဲများတွင် အသုံးပြုနိုင်သည်</small>
+                </div>
+                <button style="width: auto; background: #ffc107; color: #000; padding: 9px 12px; font-size: 13px;" onclick="switchPage('topup')">+ ငွေဖြည့်မည်</button>
+            </div>
+
+            <!-- ==================== PAGE 1: DATA / PLAN ဝယ်ယူရန် ==================== -->
+            <div id="page-shop">
+                <div class="section-box">
+                    <div class="section-title">🛒 Data (MB) နှင့် Plan များ ဝယ်ယူရန်</div>
+                    <label>ထည့်သွင်းမည့် ဖုန်းနံပါတ် ရိုက်ထည့်ပါ:</label>
+                    <input type="tel" id="target-phone" placeholder="ဥပမာ - 096xxxxxxxx / 097xxxxxxxx">
+
+                    <div class="cat-grid">
+                        <button id="cat-mytel_mb" class="cat-btn active" onclick="loadPackages('mytel_mb')">Mytel MB</button>
+                        <button id="cat-mytel_min" class="cat-btn" onclick="loadPackages('mytel_min')">Mytel Min</button>
+                        <button id="cat-atom_mb" class="cat-btn" onclick="loadPackages('atom_mb')">Atom MB</button>
+                        <button id="cat-mytel_plan" class="cat-btn" onclick="loadPackages('mytel_plan')">Mytel Plan</button>
+                        <button id="cat-atom_plan" class="cat-btn" onclick="loadPackages('atom_plan')" style="grid-column: span 2;">Atom Plan</button>
+                    </div>
+
+                    <div id="atom-warning-box" class="hidden atom-warning">
+                        ⚠️ <b>Atom ဝယ်ယူသူများ သတိပြုရန် -</b> ဘေလ်ချေးထားသော (ကြိုသုံးယူထားသော) ဆင်းမ်ကတ်များသို့ Data / Plan များ ထည့်သွင်း၍ မရပါ။
+                    </div>
+                </div>
+                <div id="package-list"></div>
+            </div>
+
+            <!-- ==================== PAGE 2: MLBB CUSTOM MATCH (သီးသန့် စာမျက်နှာ) ==================== -->
+            <div id="page-mlbb" class="hidden">
+                
+                <!-- Live Matches Section -->
+                <div class="section-box" id="liveMatchSection">
+                    <div class="section-title" style="color: #28a745;">🟢 Live Matches (လက်ရှိ စိန်ခေါ်မှုများ)</div>
+                    <div id="liveMatchesContainer">
+                        <small style="color:#888; display:block; text-align:center;">လက်ရှိ ပွဲရှာထားသူ မရှိသေးပါ။</small>
+                    </div>
+                </div>
+
+                <!-- Create Match Form -->
+                <div class="section-box">
+                    <div class="section-title">⚔️ MLBB Custom ပွဲအသစ် ရှာမည်</div>
+                    
+                    <label>Mode ရွေးချယ်ပါ:</label>
+                    <div class="mode-grid">
+                        <button id="mode-1v1" class="mode-btn active" onclick="selectMode('1v1')">1 vs 1</button>
+                        <button id="mode-2v2" class="mode-btn" onclick="selectMode('2v2')">2 vs 2</button>
+                        <button id="mode-3v3" class="mode-btn" onclick="selectMode('3v3')">3 vs 3</button>
+                        <button id="mode-5v5" class="mode-btn" onclick="selectMode('5v5')">5 vs 5</button>
+                    </div>
+
+                    <label>ဂိမ်းအိုင်ဒီ (Game ID):</label>
+                    <input type="number" id="mlbb-gameId" placeholder="ဥပမာ - 123456789">
+
+                    <label>ဆက်သွယ်ရန် (Tg / Viber / Ph No):</label>
+                    <input type="text" id="mlbb-contact" placeholder="Admin ဆက်သွယ်ရန် ဖုန်း (သို့) Tg">
+
+                    <div id="heroContainer"></div>
+
+                    <label>စည်းကမ်းချက်များ (Custom Rules):</label>
+                    <div class="input-group">
+                        <input type="text" id="ruleInput" placeholder="ဥပမာ - Recall မနှိပ်ရ">
+                        <button onclick="addRule()" style="background:#1a73e8;">+ Add</button>
+                    </div>
+                    <ul id="ruleList" class="rule-list"></ul>
+
+                    <label>ကြေးပမာဏ (Ks) - Wallet ထဲမှ ဖြတ်ပါမည်:</label>
+                    <input type="number" id="mlbb-bet" placeholder="ဥပမာ - 5000">
+
+                    <button id="mlbb-submit-btn" onclick="submitMatch()" class="btn-success" style="margin-top: 10px; font-size: 15px;">🔍 ငွေချေပြီး ပွဲရှာမည် (Find Match)</button>
+                </div>
+            </div>
+
+            <!-- ==================== PAGE 3: ငွေဖြည့်သွင်းရန် ==================== -->
+            <div id="page-topup" class="hidden">
+                <div class="section-box">
+                    <div class="section-title">💳 အကောင့်ထဲသို့ ငွေဖြည့်သွင်းရန် (Top-up)</div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="selectPay('KPay')" style="background:#0056b3;">KBZPay</button>
+                        <button onclick="selectPay('WavePay')" style="background:#e6a800; color:#000;">WavePay</button>
+                    </div>
+
+                    <div id="pay-details" class="hidden" style="margin-top:12px;">
+                        <div class="pay-info-card">
+                            <p style="margin:4px 0;"><strong>Payment:</strong> <span id="pay-method-name" style="color:#1a73e8; font-weight:bold;"></span></p>
+                            <p style="margin:6px 0;"><strong>ငွေလွှဲနံပါတ်:</strong> <span id="pay-num" style="font-size:16px; font-weight:bold;">09688022655</span> 
+                               <button onclick="copyNumber()" style="width:auto; padding:4px 10px; font-size:12px; margin-left:5px;">Copy</button>
+                            </p>
+                            <p style="margin:4px 0;"><strong>Acc Name:</strong> Htet Wai Yan</p>
+                        </div>
+
+                        <label>သွင်းမည့် ငွေပမာဏ (Ks):</label>
+                        <input type="number" id="topup-amount" placeholder="ဥပမာ - 5000">
+                        
+                        <label>ပြေစာမှ လုပ်ငန်းစဉ်အမှတ် (နောက်ဆုံး ၆ လုံး):</label>
+                        <input type="number" id="topup-tid" placeholder="ဥပမာ - 123456">
+                        
+                        <label>ငွေလွှဲပြေစာ (Screenshot) ထည့်ရန်:</label>
+                        <input type="file" id="receipt-file" accept="image/*">
+                        
+                        <button class="btn-success" id="upload-btn" onclick="submitReceipt()">✅ ပြေစာပို့မည် (Upload)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== PAGE 4: HISTORY မှတ်တမ်း ==================== -->
+            <div id="page-history" class="hidden">
+                <div class="section-box">
+                    <div class="section-title">📜 ငွေဖြည့် / အသုံးပြုမှု မှတ်တမ်း (History)</div>
+                    <div class="filter-tabs">
+                        <button id="filt-all" class="filter-btn active" onclick="setHistoryFilter('all')">အားလုံး</button>
+                        <button id="filt-buy" class="filter-btn" onclick="setHistoryFilter('buy')">🛒 ဝယ်ယူ/ပွဲဆော့</button>
+                        <button id="filt-topup" class="filter-btn" onclick="setHistoryFilter('topup')">💳 ငွေဖြည့်</button>
+                    </div>
+                    <div id="history-list"><small style="color:#888;">မှတ်တမ်း မရှိသေးပါ။</small></div>
+                </div>
+                <button class="btn-danger" style="margin-top:10px;" onclick="logout()">🚪 အကောင့်မှထွက်ရန် (Logout)</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Accept Match Modal Popup -->
+    <div id="acceptModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #28a745; margin-top:0;">✅ MLBB ပွဲလက်ခံမည်</h3>
+            <p id="modalMatchInfo" style="color: #0d47a1; font-weight: bold; text-align: center; background:#eef6ff; padding:8px; border-radius:8px;"></p>
+            <p style="font-size:12px; color:#dc3545; text-align:center;">* လက်ခံပါက သင့် Wallet ထဲမှ ကြေးပမာဏ ဖြတ်တောက်ပါမည်။</p>
+            
+            <label>သင့် ဂိမ်းအိုင်ဒီ (Game ID):</label>
+            <input type="number" id="acceptGameId" placeholder="ဥပမာ - 987654321">
+
+            <label>ဆက်သွယ်ရန် (Tg / Viber / Ph No):</label>
+            <input type="text" id="acceptContact" placeholder="Admin ဆက်သွယ်ရန် ဖြည့်ပါ">
+
+            <button id="confirm-accept-btn" onclick="confirmAccept()" class="btn-success" style="margin-top: 10px;">ငွေချေပြီး လက်ခံမည်</button>
+            <button onclick="closeModal()" class="btn-secondary" style="margin-top: 6px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <div id="bottom-nav" class="bottom-nav hidden">
+        <button id="nav-shop" class="nav-item active" onclick="switchPage('shop')">
+            <span class="icon">🛒</span>
+            <span>Data ဝယ်ရန်</span>
+        </button>
+        <button id="nav-mlbb" class="nav-item" onclick="switchPage('mlbb')">
+            <span class="icon">🎮</span>
+            <span>MLBB ပွဲရှာ</span>
+        </button>
+        <button id="nav-topup" class="nav-item" onclick="switchPage('topup')">
+            <span class="icon">💳</span>
+            <span>ငွေဖြည့်ရန်</span>
+        </button>
+        <button id="nav-history" class="nav-item" onclick="switchPage('history')">
+            <span class="icon">📜</span>
+            <span>History</span>
+        </button>
+    </div>
+</div>
+
+<script>
+    const API_URL = "https://data-seller.onrender.com";
+
+    let packages = {
+        mytel_mb: [{ name: "1GB (3 Days)", price: 930, provider: "Mytel Agent App" }],
+        mytel_min: [{ name: "100 Min (30 Days)", price: 800, provider: "Mytel App" }],
+        atom_mb: [{ name: "870MB / 1GB (3D/30D)", price: 1000, provider: "Eagle App" }],
+        mytel_plan: [{ name: "15GB + 8000 Min", price: 13800, provider: "Mytel MBCCS App" }],
+        atom_plan: [{ name: "24GB + 8000 Min", price: 13800, provider: "Eagle App" }]
+    };
+
+    const heroes = [
+        "Aamon", "Akai", "Aldous", "Alice", "Alpha", "Alucard", "Angela", "Argus", "Arlott", "Atlas", 
+        "Aulus", "Aurora", "Badang", "Balmond", "Bane", "Barats", "Baxia", "Beatrix", "Belerick", "Benedetta", 
+        "Brody", "Bruno", "Carmilla", "Cecilion", "Chang'e", "Chip", "Chou", "Cici", "Clint", "Cyclops", 
+        "Diggie", "Dyrroth", "Edith", "Estes", "Eudora", "Fanny", "Faramis", "Franco", "Fredrinn", "Freya", 
+        "Gatotkaca", "Gloo", "Gord", "Granger", "Guinevere", "Gusion", "Hanabi", "Hanzo", "Harith", "Harley", 
+        "Hayabusa", "Helcurt", "Hilda", "Hirara", "Hylos", "Irithel", "Ixia", "Jawhead", "Johnson", "Joy", 
+        "Julian", "Kadita", "Kagura", "Kaja", "Karina", "Karrie", "Khaleed", "Khufra", "Kimmy", "Lancelot", 
+        "Lapu-Lapu", "Layla", "Leomord", "Lesley", "Ling", "Lolita", "Lukas", "Lunox", "Luo Yi", "Lylia", 
+        "Martis", "Masha", "Mathilda", "Melissa", "Minotaur", "Minsitthar", "Miya", "Moskov", "Nana", "Natalia", 
+        "Natan", "Nolan", "Novaria", "Odette", "Paquito", "Pharsa", "Phoveus", "Popol and Kupa", "Rafaela", "Roger", 
+        "Ruby", "Saber", "Selena", "Silvanna", "Sun", "Suyou", "Terizla", "Thamuz", "Tigreal", "Uranus", 
+        "Vale", "Valentina", "Valir", "Vexana", "Wanwan", "X.Borg", "Xavier", "Yi Sun-shin", "Yin", "Yu Zhong", 
+        "Yve", "Zhask", "Zhuxin", "Zilong"
+    ];
+
+    let isLoginMode = true;
+    let currentUser = null;
+    let currentCategory = 'mytel_mb';
+    let autoRefreshTimer = null;
+    let allHistoryItems = [];
+    let historyFilter = 'all';
+
+    // MLBB Variables
+    let currentMode = "1v1";
+    let rulesArray = [];
+    let selectedMatchId = null;
+
+    function switchPage(pageName) {
+        ['shop', 'mlbb', 'topup', 'history'].forEach(p => {
+            document.getElementById(`page-${p}`).classList.add('hidden');
+            document.getElementById(`nav-${p}`).classList.remove('active');
+        });
+        document.getElementById(`page-${pageName}`).classList.remove('hidden');
+        document.getElementById(`nav-${pageName}`).classList.add('active');
+
+        if (pageName === 'mlbb') fetchLiveMatches();
+        if (pageName === 'history') syncUserData();
+    }
+
+    async function fetchServerPackages() {
+        try {
+            const res = await fetch(`${API_URL}/packages`);
+            if (res.ok) {
+                packages = await res.json();
+                if (currentUser) loadPackages(currentCategory);
+            }
+        } catch (e) {}
+    }
+    fetchServerPackages();
+
+    function forgotPassword() {
+        alert("🔑 Password မေ့သွားပါသလား?\n\n💬 Telegram: @htet7701\n📞 Viber: 09764088902");
+    }
+
+    function toggleAuthMode() {
+        isLoginMode = !isLoginMode;
+        document.getElementById('auth-title').innerText = isLoginMode ? "အကောင့်ဝင်ရန် (Login)" : "အကောင့်အသစ်ဖွင့်ရန် (Register)";
+        document.getElementById('auth-btn').innerText = isLoginMode ? "Login ဝင်မည်" : "အကောင့်ဖွင့်မည်";
+        document.getElementById('toggle-btn').innerText = isLoginMode ? "အကောင့်အသစ်ဖွင့်ရန်" : "Login ပြန်ဝင်ရန်";
+    }
+
+    async function handleAuth() {
+        const phone = document.getElementById('auth-phone').value.trim();
+        const pass = document.getElementById('auth-pass').value.trim();
+        if (!phone || !pass) return alert("ဖုန်းနံပါတ်နှင့် Password ပြည့်စုံစွာထည့်ပါ။");
+
+        const btn = document.getElementById('auth-btn');
+        btn.innerText = "ခေတ္တစောင့်ပါ...";
+
+        try {
+            const res = await fetch(`${API_URL}/auth`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mode: isLoginMode ? "login" : "register", phone: phone, password: pass })
+            });
+            const data = await res.json();
+            if (data.status === "success") {
+                if (isLoginMode) {
+                    currentUser = phone;
+                    enterDashboard(data.balance);
+                } else {
+                    alert(data.msg);
+                    toggleAuthMode();
+                }
+            } else {
+                alert(data.msg);
+            }
+        } catch (err) {
+            alert("Server ချိတ်ဆက်မှု အခက်အခဲရှိနေပါသည်။");
+        }
+        btn.innerText = isLoginMode ? "Login ဝင်မည်" : "အကောင့်ဖွင့်မည်";
+    }
+
+    function enterDashboard(bal) {
+        document.getElementById('auth-screen').classList.add('hidden');
+        document.getElementById('main-screen').classList.remove('hidden');
+        document.getElementById('bottom-nav').classList.remove('hidden');
+        document.getElementById('user-display').innerText = "Acc ID: " + currentUser;
+        document.getElementById('balance-display').innerText = bal.toLocaleString() + " Ks";
+        
+        switchPage('shop');
+        fetchServerPackages();
+        loadPackages('mytel_mb');
+        selectMode('1v1');
+        syncUserData();
+        fetchLiveMatches();
+
+        if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+        autoRefreshTimer = setInterval(() => {
+            syncUserData();
+            fetchLiveMatches();
+        }, 5000);
+    }
+
+    async function syncUserData() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${API_URL}/user_data/${currentUser}`);
+            const data = await res.json();
+            document.getElementById('balance-display').innerText = data.balance.toLocaleString() + " Ks";
+            allHistoryItems = data.history || [];
+            renderHistory();
+        } catch (e) {}
+    }
+
+    // ==================== DATA SHOP LOGIC ====================
+    function loadPackages(cat) {
+        currentCategory = cat;
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        const activeBtn = document.getElementById(`cat-${cat}`);
+        if (activeBtn) activeBtn.classList.add('active');
+
+        const atomWarn = document.getElementById('atom-warning-box');
+        if (cat === 'atom_mb' || cat === 'atom_plan') atomWarn.classList.remove('hidden');
+        else atomWarn.classList.add('hidden');
+
+        const list = document.getElementById('package-list');
+        list.innerHTML = "";
+        (packages[cat] || []).forEach((pkg) => {
+            list.innerHTML += `
+                <div class="pkg-card">
+                    <div>
+                        <strong style="font-size:15px;">${pkg.name}</strong><br>
+                        <small style="color:#1a73e8; font-weight:bold;">${pkg.price.toLocaleString()} Ks</small>
+                    </div>
+                    <button style="width:auto; padding:8px 16px;" onclick="buyPackage('${pkg.name}', ${pkg.price}, '${pkg.provider}')">ဝယ်မည်</button>
+                </div>
+            `;
+        });
+    }
+
+    async function buyPackage(pkgName, price, provider) {
+        const targetPhone = document.getElementById('target-phone').value.trim();
+        if (!targetPhone) return alert("Data/Plan ထည့်သွင်းမည့် ဖုန်းနံပါတ်ကို အရင်ရိုက်ထည့်ပါ။");
+        if (!/^09\d{9}$/.test(targetPhone)) return alert("⚠️ 09 ဖြင့်စသော ဂဏန်း (၁၁) လုံး အတိအကျ ရိုက်ထည့်ပါ။");
+
+        if (provider.includes("Mytel") && !targetPhone.startsWith("096")) return alert("⚠️ Mytel ဖုန်းနံပါတ် (096...) ကိုသာ ထည့်သွင်းပါ။");
+        if (provider.includes("Eagle") && !targetPhone.startsWith("097")) return alert("⚠️ Atom ဖုန်းနံပါတ် (097...) ကိုသာ ထည့်သွင်းပါ။");
+
+        if (!confirm(`ဖုန်းနံပါတ်: ${targetPhone}\nPackage: ${pkgName}\nကျသင့်ငွေ: ${price.toLocaleString()} Ks\n\nသေချာပါသလား?`)) return;
+
+        try {
+            const res = await fetch(`${API_URL}/buy_package`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_phone: currentUser, target_phone: targetPhone, pkg_name: pkgName, price: price, provider: provider })
+            });
+            const data = await res.json();
+            alert(data.msg);
+            if (data.status === "success") {
+                syncUserData();
+                switchPage('history');
+            }
+        } catch (err) {
+            alert("Server ချိတ်ဆက်မှု အခက်အခဲရှိနေပါသည်။");
+        }
+    }
+
+    // ==================== MLBB CUSTOM MATCH LOGIC ====================
+    function selectMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`mode-${mode}`).classList.add('active');
+
+        const container = document.getElementById("heroContainer");
+        let html = "";
+        if (mode === '1v1') html += createHeroUI("hero1", "ကိုယ့် Hero အမည်:");
+        else if (mode === '2v2') { html += createHeroUI("hero1", "ကိုယ့် Hero (၁):"); html += createHeroUI("hero2", "ကိုယ့် Hero (၂):"); }
+        else if (mode === '3v3') { html += createHeroUI("hero1", "ကိုယ့် Hero (၁):"); html += createHeroUI("hero2", "ကိုယ့် Hero (၂):"); html += createHeroUI("hero3", "ကိုယ့် Hero (၃):"); }
+        else html = `<p style="color:#666; font-size:13px; margin:6px 0;">(5vs5 အတွက် Hero ကြိုရွေးရန် မလိုပါ)</p>`;
+
+        container.innerHTML = html;
+        if (mode !== '5v5') {
+            setupAutocomplete("hero1", "heroList1");
+            if (mode === '2v2' || mode === '3v3') setupAutocomplete("hero2", "heroList2");
+            if (mode === '3v3') setupAutocomplete("hero3", "heroList3");
+        }
+    }
+
+    function createHeroUI(id, labelText) {
+        let listId = id.replace("hero", "heroList");
+        return `<label>${labelText}</label>
+                <div class="autocomplete">
+                    <input type="text" id="${id}" placeholder="Hero နာမည် ရိုက်ရှာပါ..." autocomplete="off">
+                    <div id="${listId}" class="autocomplete-items"></div>
+                </div>`;
+    }
+
+    function setupAutocomplete(inputId, listId) {
+        const input = document.getElementById(inputId);
+        const list = document.getElementById(listId);
+        if (!input || !list) return;
+
+        const renderList = (filterText) => {
+            list.innerHTML = "";
+            let matched = heroes.filter(h => h.toLowerCase().includes(filterText.toLowerCase()));
+            if (matched.length === 0) { list.style.display = "none"; return; }
+            list.style.display = "block";
+            matched.forEach(h => {
+                let div = document.createElement("div");
+                div.innerText = h;
+                div.onclick = () => { input.value = h; list.style.display = "none"; };
+                list.appendChild(div);
+            });
+        };
+
+        input.addEventListener("input", () => renderList(input.value));
+        input.addEventListener("click", () => renderList(input.value));
+    }
+
+    document.addEventListener("click", (e) => {
+        ["hero1", "hero2", "hero3"].forEach((id, i) => {
+            let list = document.getElementById(`heroList${i+1}`);
+            if (list && e.target.id !== id) list.style.display = "none";
+        });
+    });
+
+    function addRule() {
+        const val = document.getElementById("ruleInput").value.trim();
+        if (val) { rulesArray.push(val); renderRules(); document.getElementById("ruleInput").value = ""; }
+    }
+    function renderRules() {
+        const list = document.getElementById("ruleList");
+        list.innerHTML = "";
+        rulesArray.forEach((rule, i) => {
+            list.innerHTML += `<li><span>${rule}</span> <span class="delete-btn" onclick="rulesArray.splice(${i},1);renderRules();">✖</span></li>`;
+        });
+    }
+
+    async function fetchLiveMatches() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${API_URL}/mlbb/matches`);
+            const matches = await res.json();
+            const container = document.getElementById("liveMatchesContainer");
+            if (matches.length === 0) {
+                container.innerHTML = `<small style="color:#888; display:block; text-align:center;">လက်ရှိ ပွဲရှာထားသူ မရှိသေးပါ။</small>`;
+                return;
+            }
+            container.innerHTML = "";
+            matches.forEach(m => {
+                const isMine = m.creator_phone === currentUser;
+                const btnHtml = isMine 
+                    ? `<span style="font-size:12px; color:#ff6b00; font-weight:bold;">⏳ စောင့်ဆိုင်းဆဲ</span>`
+                    : `<button class="accept-btn" onclick="openAcceptModal('${m.match_id}', '${m.heroes}', ${m.bet}, '${m.mode}')">လက်ခံမည်</button>`;
+
+                container.innerHTML += `
+                    <div class="live-match-card">
+                        <div class="live-match-info">
+                            <strong style="font-size:15px;">⚔️ ${m.heroes} <span style="font-size:12px; color:#1a73e8;">(${m.mode})</span></strong>
+                            <span style="color:#28a745; font-weight:bold; font-size:14px;">💰 ${m.bet.toLocaleString()} Ks</span>
+                            <small style="color:#666; font-size:11px;">📜 ${m.rules.replace(/\n/g, ', ')}</small>
+                        </div>
+                        ${btnHtml}
+                    </div>
+                `;
+            });
+        } catch (e) {}
+    }
+
+    async function submitMatch() {
+        const gameId = document.getElementById("mlbb-gameId").value.trim();
+        const contact = document.getElementById("mlbb-contact").value.trim();
+        const bet = parseInt(document.getElementById("mlbb-bet").value.trim());
+
+        if (!gameId || !contact || !bet) return alert("Game ID၊ ဆက်သွယ်ရန် နှင့် ကြေးပမာဏ ပြည့်စုံစွာ ဖြည့်ပါ။");
+
+        let selectedHeroes = [];
+        if (currentMode !== '5v5') {
+            let h1 = document.getElementById("hero1")?.value.trim();
+            let h2 = document.getElementById("hero2")?.value.trim();
+            let h3 = document.getElementById("hero3")?.value.trim();
+            if (currentMode === '1v1' && !h1) return alert("Hero အမည် ရွေးချယ်ပါ။");
+            if (currentMode === '2v2' && (!h1 || !h2)) return alert("Hero (၂) ကောင်လုံး ရွေးချယ်ပါ။");
+            if (currentMode === '3v3' && (!h1 || !h2 || !h3)) return alert("Hero (၃) ကောင်လုံး ရွေးချယ်ပါ။");
+            selectedHeroes = [h1, h2, h3].filter(Boolean);
+        }
+
+        const heroText = currentMode === '5v5' ? "5v5 Full Team" : selectedHeroes.join(' & ');
+        const rulesText = rulesArray.length > 0 ? rulesArray.join('\n- ') : "စည်းကမ်း မသတ်မှတ်ထားပါ";
+
+        if (!confirm(`Mode: ${currentMode}\nHero: ${heroText}\nကြေးပမာဏ: ${bet.toLocaleString()} Ks\n\nသင့် Wallet ထဲမှ ${bet.toLocaleString()} Ks ဖြတ်တောက်ပြီး ပွဲတင်ပါမည်။ သေချာပါသလား?`)) return;
+
+        const btn = document.getElementById("mlbb-submit-btn");
+        btn.innerText = "ပွဲတင်နေပါသည်...";
+
+        try {
+            const res = await fetch(`${API_URL}/mlbb/create`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_phone: currentUser,
+                    game_id: gameId,
+                    contact: contact,
+                    mode: currentMode,
+                    heroes: heroText,
+                    bet: bet,
+                    rules: rulesText
+                })
+            });
+            const data = await res.json();
+            alert(data.msg);
+            if (data.status === "success") {
+                document.getElementById("mlbb-gameId").value = "";
+                document.getElementById("mlbb-contact").value = "";
+                document.getElementById("mlbb-bet").value = "";
+                rulesArray = []; renderRules();
+                selectMode(currentMode);
+                syncUserData();
+                fetchLiveMatches();
+            }
+        } catch (e) {
+            alert("Server ချိတ်ဆက်မှု အခက်အခဲရှိနေပါသည်။");
+        }
+        btn.innerText = "🔍 ငွေချေပြီး ပွဲရှာမည် (Find Match)";
+    }
+
+    function openAcceptModal(matchId, heroText, bet, mode) {
+        selectedMatchId = matchId;
+        document.getElementById("modalMatchInfo").innerText = `[${mode}] ${heroText} — ${bet.toLocaleString()} Ks`;
+        document.getElementById("acceptModal").style.display = "block";
+    }
+
+    function closeModal() {
+        document.getElementById("acceptModal").style.display = "none";
+        document.getElementById("acceptGameId").value = "";
+        document.getElementById("acceptContact").value = "";
+    }
+
+    async function confirmAccept() {
+        const accGameId = document.getElementById("acceptGameId").value.trim();
+        const accContact = document.getElementById("acceptContact").value.trim();
+        if (!accGameId || !accContact) return alert("Game ID နှင့် ဆက်သွယ်ရန် ဖြည့်သွင်းပါ။");
+
+        const btn = document.getElementById("confirm-accept-btn");
+        btn.innerText = "လုပ်ဆောင်နေပါသည်...";
+
+        try {
+            const res = await fetch(`${API_URL}/mlbb/accept`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    match_id: selectedMatchId,
+                    user_phone: currentUser,
+                    game_id: accGameId,
+                    contact: accContact
+                })
+            });
+            const data = await res.json();
+            alert(data.msg);
+            if (data.status === "success") {
+                closeModal();
+                syncUserData();
+                fetchLiveMatches();
+            }
+        } catch (e) {
+            alert("Server ချိတ်ဆက်မှု အခက်အခဲရှိနေပါသည်။");
+        }
+        btn.innerText = "ငွေချေပြီး လက်ခံမည်";
+    }
+
+    // ==================== TOPUP & HISTORY LOGIC ====================
+    function selectPay(method) {
+        document.getElementById('pay-details').classList.remove('hidden');
+        document.getElementById('pay-method-name').innerText = method;
+    }
+
+    function copyNumber() {
+        navigator.clipboard.writeText("09688022655");
+        alert("ဖုန်းနံပါတ် 09688022655 ကို Copy ကူးပြီးပါပြီ။");
+    }
+
+    async function submitReceipt() {
+        const amount = document.getElementById('topup-amount').value.trim();
+        const tid = document.getElementById('topup-tid').value.trim();
+        const fileInput = document.getElementById('receipt-file');
+        const method = document.getElementById('pay-method-name').innerText;
+
+        if (!amount || !tid || fileInput.files.length === 0) return alert("အချက်အလက် ပြည့်စုံစွာ ထည့်သွင်းပါ။");
+
+        const btn = document.getElementById('upload-btn');
+        btn.innerText = "ပို့နေပါသည်...";
+
+        const formData = new FormData();
+        formData.append("user_phone", currentUser);
+        formData.append("amount", amount);
+        formData.append("tid", tid);
+        formData.append("method", method);
+        formData.append("receipt", fileInput.files[0]);
+
+        try {
+            const res = await fetch(`${API_URL}/upload_receipt`, { method: "POST", body: formData });
+            const data = await res.json();
+            alert(data.msg);
+            if (data.status === "success") {
+                document.getElementById('topup-amount').value = "";
+                document.getElementById('topup-tid').value = "";
+                fileInput.value = "";
+                syncUserData();
+                switchPage('history');
+            }
+        } catch (err) {
+            alert("ပြေစာပို့ရာတွင် အမှားအယွင်းရှိနေပါသည်။");
+        }
+        btn.innerText = "✅ ပြေစာပို့မည် (Upload)";
+    }
+
+    function setHistoryFilter(type) {
+        historyFilter = type;
+        ['all', 'buy', 'topup'].forEach(t => document.getElementById(`filt-${t}`).classList.remove('active'));
+        document.getElementById(`filt-${type}`).classList.add('active');
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const box = document.getElementById('history-list');
+        let filtered = historyFilter === 'all' ? allHistoryItems : allHistoryItems.filter(i => i.type === historyFilter);
+
+        if (filtered.length === 0) {
+            box.innerHTML = `<p style="text-align:center; color:#888; font-size:13px; padding:15px 0;">မှတ်တမ်း မရှိသေးပါ။</p>`;
+            return;
+        }
+
+        box.innerHTML = "";
+        filtered.forEach(item => {
+            const isTopup = item.type === "topup";
+            box.innerHTML += `
+                <div class="hist-card ${isTopup ? 'topup-type' : 'buy-type'}">
+                    <div class="hist-top">
+                        <div>
+                            <span class="hist-badge ${isTopup ? 'badge-topup' : 'badge-buy'}">${isTopup ? '💳 ငွေဖြည့်သွင်းမှု' : '🛒 အသုံးပြုမှု'}</span><br>
+                            <strong style="font-size:14px;">${item.title}</strong>
+                        </div>
+                        <div style="text-align:right;">
+                            <strong style="color:${isTopup ? '#28a745' : '#dc3545'}; font-size:15px;">${isTopup ? '+' : '-'}${item.amount.toLocaleString()} Ks</strong><br>
+                            <small style="font-weight:bold;">${item.status}</small>
+                        </div>
+                    </div>
+                    <span class="hist-time">🕒 ရက်စွဲ/အချိန်: <b>${item.time}</b></span>
+                </div>
+            `;
+        });
+    }
+
+    function logout() {
+        currentUser = null;
+        if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+        document.getElementById('main-screen').classList.add('hidden');
+        document.getElementById('bottom-nav').classList.add('hidden');
+        document.getElementById('auth-screen').classList.remove('hidden');
+    }
+</script>
+</body>
+</html>
