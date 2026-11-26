@@ -17,7 +17,7 @@ MLBB_BOT_TOKEN = "9165666227:AAHh5qF4vDppjxcFmQ4k9vcKABiMXBEAzYw"
 MLBB_ADMIN_ID = "7102568821"
 
 FIREBASE_URL = "https://dataseller-e4c0e-default-rtdb.firebaseio.com"
-WEB_URL = "https://data-seller.onrender.com"
+WEB_URL = "https://data-seller-7pfm.onrender.com"
 
 data_bot = telebot.TeleBot(DATA_BOT_TOKEN, threaded=False)
 mlbb_bot = telebot.TeleBot(MLBB_BOT_TOKEN, threaded=False)
