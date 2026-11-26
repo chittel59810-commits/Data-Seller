@@ -23,7 +23,6 @@ mlbb_bot = telebot.TeleBot(MLBB_BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 CORS(app)
 
-# အသစ်ပြင်ဆင်ထားသော Mytel & Atom Package စာရင်းအပြည့်အစုံ
 DEFAULT_PACKAGES = {
     # Mytel Packages
     "mb1": {"cat": "mytel_bill", "name": "1,000 Ks ဖုန်းဘေလ်", "price": 980, "provider": "Mytel Agent App", "order": 1},
@@ -78,7 +77,6 @@ def save_user(phone, data):
 def get_all_packages():
     res = requests.get(f"{FIREBASE_URL}/packages.json")
     if res.status_code == 200 and res.json():
-        # စနစ်ဟောင်း ကုဒ်များဖြစ်နေပါက အသစ်သို့ ပြောင်းလဲပေးခြင်း
         existing = res.json()
         if "mb1" not in existing:
             requests.put(f"{FIREBASE_URL}/packages.json", json=DEFAULT_PACKAGES)
@@ -90,19 +88,65 @@ def get_all_packages():
 def add_history(phone, item_id, record):
     requests.patch(f"{FIREBASE_URL}/history/{phone}/{item_id}.json", json=record)
 
-def get_history(phone):
+def get_history(phone, limit=25):
     res = requests.get(f"{FIREBASE_URL}/history/{phone}.json")
     if res.status_code == 200 and res.json():
         data = res.json()
-        items = list(data.values())
+        items = [v for v in data.values() if isinstance(v, dict)]
         items.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
-        return items[:25]
+        return items[:limit]
     return []
+
+# Admin ဘက်မှ User History စစ်ဆေးရန် Helper Function
+def format_user_history_for_admin(phone, filter_mode="all"):
+    user = get_user(phone)
+    if not user:
+        return "❌ ဤဖုန်းနံပါတ်ဖြင့် အကောင့်မရှိပါ။"
+
+    bal = user.get("balance", 0)
+    items = get_history(phone, limit=50)
+
+    if filter_mode == "topup":
+        items = [i for i in items if i.get("type") == "topup" or "ငွေသွင်း" in i.get("title", "")]
+        header_title = f"💳 <b>{phone} ၏ ငွေသွင်းမှတ်တမ်း (Top-ups)</b>"
+    elif filter_mode == "withdraw":
+        items = [i for i in items if "ငွေထုတ်" in i.get("title", "")]
+        header_title = f"💸 <b>{phone} ၏ ငွေထုတ်မှတ်တမ်း (Withdrawals)</b>"
+    else:
+        header_title = f"📜 <b>{phone} ၏ မှတ်တမ်းအားလုံး (History)</b>"
+
+    if not items:
+        return f"{header_title}\n💰 လက်ရှိလက်ကျန်ငွေ: <b>{bal:,} Ks</b>\n\n⚠️ မှတ်တမ်း မရှိသေးပါ။"
+
+    lines = [
+        header_title,
+        f"💰 လက်ရှိလက်ကျန်ငွေ: <b>{bal:,} Ks</b>",
+        "--------------------------------"
+    ]
+
+    for idx, item in enumerate(items[:25], start=1):
+        is_topup = item.get("type") == "topup"
+        sign = "+" if is_topup else "-"
+        amt = item.get("amount", 0)
+        title = item.get("title", "N/A")
+        status = item.get("status", "")
+        t_str = item.get("time", "အချိန်မသိ")
+
+        lines.append(
+            f"{idx}. <b>{title}</b>\n"
+            f"   💵 ပမာဏ: <b>{sign}{amt:,} Ks</b> | {status}\n"
+            f"   🕒 အချိန်: <code>{t_str}</code>"
+        )
+
+    result = "\n".join(lines)
+    if len(result) > 4000:
+        result = result[:3950] + "\n... (နောက်ဆုံးမှတ်တမ်းများသာ ပြသထားပါသည်)"
+    return result
 
 # ================= WEB & OTA UI ROUTES =================
 @app.route('/', methods=['GET'])
 def index():
-    return "Easy Data, Exchange, Withdraw & MLBB Arena Server V12 is Running!", 200
+    return "Easy Data, Exchange, Withdraw & MLBB Arena Server V13 is Running!", 200
 
 @app.route('/app', methods=['GET'])
 def serve_app_ui():
@@ -143,7 +187,7 @@ def auth():
 def user_data(phone):
     user = get_user(phone)
     bal = user.get("balance", 0) if user else 0
-    hist = get_history(phone)
+    hist = get_history(phone, limit=25)
     return jsonify({"balance": bal, "history": hist})
 
 # ================= 1. WALLET TOPUP (DATA BOT) =================
@@ -184,7 +228,8 @@ def upload_receipt():
         f"👤 အကောင့်: <code>{user_phone}</code>\n"
         f"💳 Payment: {method}\n"
         f"🔢 နောက်ဆုံး ၆ လုံး: <code>{tid}</code>\n"
-        f"💰 ပမာဏ: <b>{amount:,} Ks</b>"
+        f"💰 ပမာဏ: <b>{amount:,} Ks</b>\n"
+        f"🕒 အချိန်: {get_mm_time()}"
     )
 
     data_bot.send_photo(DATA_ADMIN_ID, receipt_img, caption=caption, parse_mode="HTML", reply_markup=markup)
@@ -194,7 +239,7 @@ def upload_receipt():
 @app.route('/exchange_request', methods=['POST'])
 def exchange_request():
     user_phone = request.form.get('user_phone')
-    ex_type = request.form.get('ex_type') # Wave to KPay / KPay to Wave / MytelPay
+    ex_type = request.form.get('ex_type')
     amount = int(request.form.get('amount'))
     recv_phone = request.form.get('recv_phone', '').strip()
     recv_name = request.form.get('recv_name', '').strip()
@@ -234,7 +279,8 @@ def exchange_request():
         f"👉 <code>{recv_phone}</code>\n"
         f"👤 အကောင့်နာမည်: <b>{recv_name}</b>\n"
         f"🔢 ပြေစာ No: <code>{tid}</code>\n"
-        f"👤 တင်သူအကောင့်: <code>{user_phone}</code>"
+        f"👤 တင်သူအကောင့်: <code>{user_phone}</code>\n"
+        f"🕒 အချိန်: {get_mm_time()}"
     )
 
     data_bot.send_photo(DATA_ADMIN_ID, receipt_img, caption=caption, parse_mode="HTML", reply_markup=markup)
@@ -259,13 +305,12 @@ def withdraw_money():
     if current_bal < amount:
         return jsonify({"status": "error", "msg": f"လက်ကျန်ငွေ မလုံလောက်ပါ။ (လက်ကျန်: {current_bal:,} Ks)"})
 
-    # လက်ကျန်ငွေ ဖြတ်တောက်ခြင်း
     save_user(user_phone, {"balance": current_bal - amount})
 
     ts = int(time.time())
     add_history(user_phone, f"wd_{ts}", {
         "type": "buy",
-        "title": f"💸 ငွေထုတ် ({method} - {recv_phone})",
+        "title": f"💸 ငွေထုတ် ({method} - {recv_phone} / {recv_name})",
         "amount": amount,
         "status": "⏳ ငွေထုတ်ပေးနေဆဲ",
         "time": get_mm_time(),
@@ -285,7 +330,8 @@ def withdraw_money():
         f"📱 လက်ခံမည့်ဖုန်း (နှိပ်၍ Copy ယူပါ):\n"
         f"👉 <code>{recv_phone}</code>\n"
         f"👤 အကောင့်နာမည်: <b>{recv_name}</b>\n"
-        f"💰 ထုတ်ယူငွေ: <b>{amount:,} Ks</b> (Wallet မှ ဖြတ်ပြီး)"
+        f"💰 ထုတ်ယူငွေ: <b>{amount:,} Ks</b> (Wallet မှ ဖြတ်ပြီး)\n"
+        f"🕒 အချိန်: {get_mm_time()}"
     )
     mlbb_bot.send_message(MLBB_ADMIN_ID, msg, parse_mode="HTML", reply_markup=markup)
 
@@ -345,13 +391,14 @@ def buy_package():
         f"🎁 Package: <b>{pkg_name}</b>\n"
         f"⚙️ ဝယ်ရမည့် App: <b>{provider}</b>\n"
         f"💵 ဖြတ်ထားသောငွေ: {price:,} Ks\n"
-        f"👤 ဝယ်သူအကောင့်: <code>{user_phone}</code>"
+        f"👤 ဝယ်သူအကောင့်: <code>{user_phone}</code>\n"
+        f"🕒 အချိန်: {get_mm_time()}"
     )
     data_bot.send_message(DATA_ADMIN_ID, order_msg, parse_mode="HTML", reply_markup=markup)
 
     return jsonify({"status": "success", "msg": "အော်ဒါတင်ပြီးပါပြီ။ မကြာမီ သင့်ဖုန်းသို့ ရောက်ရှိလာပါမည်။"})
 
-# ================= 5. MLBB CUSTOM MATCH (5% COMMISSION + WINNER BUTTONS) =================
+# ================= 5. MLBB CUSTOM MATCH =================
 @app.route('/mlbb/matches', methods=['GET'])
 def get_mlbb_matches():
     res = requests.get(f"{FIREBASE_URL}/mlbb_matches.json")
@@ -424,7 +471,8 @@ def create_mlbb_match():
         f"🎮 Mode: <b>{mode}</b>\n"
         f"⚔️ Hero: <b>{heroes}</b>\n"
         f"💰 ကြေးပမာဏ: <b>{bet:,} Ks</b> (ငွေဖြတ်ပြီး)\n"
-        f"📜 Rules:\n- {rules}"
+        f"📜 Rules:\n- {rules}\n"
+        f"🕒 အချိန်: {get_mm_time()}"
     )
     mlbb_bot.send_message(MLBB_ADMIN_ID, msg, parse_mode="HTML", reply_markup=markup)
 
@@ -479,11 +527,9 @@ def accept_mlbb_match():
     if orig_ts:
         add_history(match['creator_phone'], f"mlbb_c_{orig_ts}", {"status": "✅ ပြိုင်ဘက်တွေ့ပြီး"})
 
-    # စုစုပေါင်းကြေး နှင့် 5% နုတ်ပြီး ရရှိမည့် ဆုကြေး တွက်ချက်ခြင်း
     total_pot = bet * 2
     net_prize = int(total_pot * 0.95)
 
-    # Admin မှ အနိုင်ရသူ ရွေးချယ်ပေးရန် ခလုတ်များ
     win_markup = InlineKeyboardMarkup()
     win_markup.row(
         InlineKeyboardButton(f"🏆 Player 1 နိုင် ({net_prize:,} Ks)", callback_data=f"mlbbwin_{match['creator_phone']}_{net_prize}_{match_id}"),
@@ -521,6 +567,12 @@ def handle_data_commands(message):
     if cmd in ['/start', '/help']:
         help_text = (
             "🛠 Data & Exchange Admin Bot\n\n"
+            "📜 User မှတ်တမ်းအားလုံး စစ်ရန်:\n"
+            "/history 09xxxxxxxxx\n"
+            "💳 User ငွေသွင်းမှတ်တမ်း သီးသန့်စစ်ရန်:\n"
+            "/topups 09xxxxxxxxx\n"
+            "💸 User ငွေထုတ်မှတ်တမ်း သီးသန့်စစ်ရန်:\n"
+            "/withdraws 09xxxxxxxxx\n\n"
             "👥 သုံးစွဲသူ စာရင်း: /users\n"
             "💰 စိတ်ကြိုက်ငွေထည့်ရန်: /addbal 09xxxxxxxxx 5000\n"
             "🔍 အကောင့်စစ်ရန်: /check 09xxxxxxxxx\n"
@@ -531,6 +583,15 @@ def handle_data_commands(message):
             "🗑 ဖျက်ရန်: /delpkg ကုဒ်"
         )
         data_bot.reply_to(message, help_text)
+
+    elif cmd in ['/history', '/topups', '/withdraws']:
+        if len(parts) < 2:
+            data_bot.reply_to(message, f"⚠️ စစ်လိုသော ဖုန်းနံပါတ် ထည့်ရိုက်ပါ။ ဥပမာ - {cmd} 09688022655")
+            return
+        phone = parts[1].strip()
+        mode = "topup" if cmd == '/topups' else ("withdraw" if cmd == '/withdraws' else "all")
+        report = format_user_history_for_admin(phone, filter_mode=mode)
+        data_bot.reply_to(message, report, parse_mode="HTML")
 
     elif cmd == '/addbal':
         if len(parts) < 3:
@@ -568,6 +629,7 @@ def handle_data_commands(message):
             for idx, (u_phone, u_info) in enumerate(users_data.items(), start=1):
                 bal = u_info.get('balance', 0) if isinstance(u_info, dict) else 0
                 lines.append(f"{idx}. <code>{u_phone}</code> (လက်ကျန်: {bal:,} Ks)")
+            lines.append("\n💡 မှတ်တမ်းစစ်ရန်: /history ဖုန်းနံပါတ်")
             msg_text = "\n".join(lines)
             if len(msg_text) > 4000:
                 data_bot.reply_to(message, f"👥 <b>စုစုပေါင်း သုံးစွဲသူ: {total_users} ဦး</b> ရှိပါသည်။", parse_mode="HTML")
@@ -585,7 +647,12 @@ def handle_data_commands(message):
         if not user:
             data_bot.reply_to(message, "❌ အကောင့်မရှိပါ။")
         else:
-            msg = f"👤 <code>{phone}</code>\n🔑 Pass: <code>{user.get('password')}</code>\n💰 Bal: <b>{user.get('balance', 0):,} Ks</b>"
+            msg = (
+                f"👤 <code>{phone}</code>\n"
+                f"🔑 Pass: <code>{user.get('password')}</code>\n"
+                f"💰 Bal: <b>{user.get('balance', 0):,} Ks</b>\n\n"
+                f"📜 မှတ်တမ်းစစ်ရန်: <code>/history {phone}</code>"
+            )
             data_bot.reply_to(message, msg, parse_mode="HTML")
 
     elif cmd == '/setpass':
@@ -659,7 +726,7 @@ def handle_data_callbacks(call):
             add_history(user_phone, f"topup_{tid}", {"status": "✅ ငွေဝင်ပြီး"})
 
             data_bot.answer_callback_query(call.id, "✅ ငွေထည့်ပေးပြီးပါပြီ!")
-            data_bot.edit_message_caption(caption=f"{call.message.caption}\n\n✅ အတည်ပြုပြီး ({amount:,} Ks)", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            data_bot.edit_message_caption(caption=f"{call.message.caption}\n\n✅ အတည်ပြုပြီး ({amount:,} Ks) - {get_mm_time()}", chat_id=call.message.chat.id, message_id=call.message.message_id)
 
         elif action == "reject":
             tid = data[2] if len(data) > 2 else "000"
@@ -711,14 +778,29 @@ def handle_mlbb_commands(message):
     if cmd in ['/start', '/help']:
         help_text = (
             "🎮 MLBB Custom Match & Withdraw Admin Bot\n\n"
+            "📜 User မှတ်တမ်းအားလုံး စစ်ရန်:\n"
+            "/history 09xxxxxxxxx\n"
+            "💳 User ငွေသွင်းမှတ်တမ်း သီးသန့်စစ်ရန်:\n"
+            "/topups 09xxxxxxxxx\n"
+            "💸 User ငွေထုတ်မှတ်တမ်း သီးသန့်စစ်ရန်:\n"
+            "/withdraws 09xxxxxxxxx\n\n"
             "💰 စိတ်ကြိုက်ငွေထည့်ရန်:\n"
-            "/addbal 09xxxxxxxxx 5000\n\n"
+            "/addbal 09xxxxxxxxx 5000\n"
             "🏆 ဆုကြေး သီးသန့်ထည့်ရန်:\n"
-            "/win 09xxxxxxxxx 9500\n\n"
+            "/win 09xxxxxxxxx 9500\n"
             "🔍 အကောင့် လက်ကျန်ငွေ စစ်ရန်:\n"
             "/check 09xxxxxxxxx"
         )
         mlbb_bot.reply_to(message, help_text)
+
+    elif cmd in ['/history', '/topups', '/withdraws']:
+        if len(parts) < 2:
+            mlbb_bot.reply_to(message, f"⚠️ စစ်လိုသော ဖုန်းနံပါတ် ထည့်ရိုက်ပါ။ ဥပမာ - {cmd} 09688022655")
+            return
+        phone = parts[1].strip()
+        mode = "topup" if cmd == '/topups' else ("withdraw" if cmd == '/withdraws' else "all")
+        report = format_user_history_for_admin(phone, filter_mode=mode)
+        mlbb_bot.reply_to(message, report, parse_mode="HTML")
 
     elif cmd == '/addbal':
         if len(parts) < 3:
@@ -778,7 +860,7 @@ def handle_mlbb_commands(message):
         if not user:
             mlbb_bot.reply_to(message, "❌ အကောင့်မရှိပါ။")
         else:
-            mlbb_bot.reply_to(message, f"👤 {phone}\n💰 လက်ကျန်ငွေ: {user.get('balance', 0):,} Ks")
+            mlbb_bot.reply_to(message, f"👤 {phone}\n💰 လက်ကျန်ငွေ: {user.get('balance', 0):,} Ks\n📜 မှတ်တမ်းစစ်ရန်: /history {phone}")
 
 @mlbb_bot.callback_query_handler(func=lambda call: True)
 def handle_mlbb_callbacks(call):
