@@ -25,6 +25,9 @@ app = Flask(__name__)
 CORS(app)
 
 DEFAULT_PACKAGES = {
+    # Any Bill Package (1K = 980 Ks)
+    "anyb1": {"cat": "any_bill", "name": "1,000 Ks ဖုန်းဘေလ် (All Operators)", "price": 980, "provider": "Any Bill", "order": 0},
+
     # Mytel Packages
     "mb1": {"cat": "mytel_bill", "name": "1,000 Ks ဖုန်းဘေလ်", "price": 980, "provider": "Mytel Agent App", "order": 1},
     "mn1": {"cat": "mytel_normal", "name": "1GB (3 Days)", "price": 930, "provider": "Mytel Agent App", "order": 2},
@@ -49,6 +52,7 @@ DEFAULT_PACKAGES = {
 }
 
 VALID_CATEGORIES = [
+    "any_bill",
     "mytel_bill", "mytel_normal", "mytel_min", "mytel_plan",
     "atom_bill", "atom_normal", "atom_plan", "atom_point", "atom_otp"
 ]
@@ -57,7 +61,8 @@ APP_MAP = {
     "agent": "Mytel Agent App",
     "myid": "Mytel App",
     "mbccs": "Mytel MBCCS App",
-    "eagle": "Eagle App"
+    "eagle": "Eagle App",
+    "any": "Any Bill"
 }
 
 def get_mm_now():
@@ -82,6 +87,9 @@ def get_all_packages():
         if "mb1" not in existing:
             requests.put(f"{FIREBASE_URL}/packages.json", json=DEFAULT_PACKAGES)
             return DEFAULT_PACKAGES
+        if "anyb1" not in existing:
+            existing["anyb1"] = DEFAULT_PACKAGES["anyb1"]
+            requests.patch(f"{FIREBASE_URL}/packages.json", json={"anyb1": DEFAULT_PACKAGES["anyb1"]})
         return existing
     requests.put(f"{FIREBASE_URL}/packages.json", json=DEFAULT_PACKAGES)
     return DEFAULT_PACKAGES
@@ -146,7 +154,7 @@ def format_user_history_for_admin(phone, filter_mode="all"):
 # ================= WEB, DOWNLOAD & OTA UI ROUTES =================
 @app.route('/', methods=['GET'])
 def index():
-    return "Easy Data, Exchange, Withdraw & MLBB Arena Server V14 is Running!", 200
+    return "Easy Data 24Hr, Any Bill, Exchange & MLBB Arena Server V15 is Running!", 200
 
 @app.route('/app', methods=['GET'])
 def serve_app_ui():
@@ -172,13 +180,13 @@ def download_page():
     <body>
         <div class="box">
             <h2>📲 Easy Data & MLBB App</h2>
-            <p style="color:#555; font-size:14px; margin:0;">Mytel / Atom Data ဝယ်ယူမှု၊ ငွေချိန်း နှင့် MLBB Custom Match App</p>
+            <p style="color:#555; font-size:14px; margin:0;">24Hr Data & Any Bill ဝယ်ယူမှု၊ ငွေချိန်း နှင့် MLBB Custom Match App</p>
             <a class="btn" href="{APK_DIRECT_URL}">⬇️ Download APK (8.66 MB)</a>
             <div class="guide">
                 <strong>📌 App သွင်းနည်း လမ်းညွှန် -</strong><br>
                 ၁။ အပေါ်က အစိမ်းရောင် <b>Download APK</b> ခလုတ်ကို နှိပ်ပါ။<br>
                 ၂။ ဒေါင်းလုဒ်ပြီးပါက ဖိုင်ကိုဖွင့်ပြီး <b>Install</b> နှိပ်ပါ။<br>
-                ၃။ Google Play Protect ပေါ်လာပါက <b>More details ➔ Install anyway</b> ကို နှိပ်၍ သွင်းနိုင်ပါသည်။
+                ၃။ Xiaomi/Redmi ဖုန်းများဖြစ်ပါက Settings မှ <b>Allow from this source</b> ကို ဖွင့်ပြီး <b>Continue installing</b> နှိပ်ပါ။
             </div>
         </div>
     </body>
@@ -370,16 +378,9 @@ def withdraw_money():
 
     return jsonify({"status": "success", "msg": "✅ ငွေထုတ်ယူရန် တင်ပြီးပါပြီ! Admin မှ မကြာမီ လွှဲပေးပါမည်။"})
 
-# ================= 4. DATA / PLAN / BILL / POINT ဝယ်ယူခြင်း =================
+# ================= 4. DATA / PLAN / ANY BILL ဝယ်ယူခြင်း (24 HOURS) =================
 @app.route('/buy_package', methods=['POST'])
 def buy_package():
-    mm_now = get_mm_now()
-    if mm_now.hour < 7 or mm_now.hour >= 19:
-        return jsonify({
-            "status": "error",
-            "msg": "⏰ ဆိုင်ပိတ်ချိန် ဖြစ်ပါသည်။ Order လက်ခံချိန် (မနက် 7:00 မှ ည 7:00 အတွင်း) မှ ပြန်လည်ဝယ်ယူပေးပါ။"
-        })
-
     data = request.json
     user_phone = data.get('user_phone')
     target_phone = data.get('target_phone', '').strip()
@@ -387,10 +388,12 @@ def buy_package():
     price = int(data.get('price'))
     provider = data.get('provider')
 
-    if "Mytel" in provider and not target_phone.startswith("096"):
-        return jsonify({"status": "error", "msg": "⚠️ Mytel အတွက် 096 ဖြင့်စသော ဖုန်းနံပါတ်သာ ထည့်သွင်းပါ။"})
-    if "Eagle" in provider and not target_phone.startswith("097"):
-        return jsonify({"status": "error", "msg": "⚠️ Atom အတွက် 097 ဖြင့်စသော ဖုန်းနံပါတ်သာ ထည့်သွင်းပါ။"})
+    # Any Bill မဟုတ်ပါက Operator နံပါတ် စစ်ဆေးခြင်း
+    if provider != "Any Bill":
+        if "Mytel" in provider and not target_phone.startswith("096"):
+            return jsonify({"status": "error", "msg": "⚠️ Mytel အတွက် 096 ဖြင့်စသော ဖုန်းနံပါတ်သာ ထည့်သွင်းပါ။"})
+        if "Eagle" in provider and not target_phone.startswith("097"):
+            return jsonify({"status": "error", "msg": "⚠️ Atom အတွက် 097 ဖြင့်စသော ဖုန်းနံပါတ်သာ ထည့်သွင်းပါ။"})
 
     user = get_user(user_phone)
     current_bal = user.get("balance", 0) if user else 0
@@ -417,19 +420,28 @@ def buy_package():
         InlineKeyboardButton("🔄 ငွေပြန်အမ်း (Refund)", callback_data=f"refund_{user_phone}_{price}_{ts}")
     )
 
+    mm_now = get_mm_now()
+    is_mb_time = (7 <= mm_now.hour < 19)
+    time_note = "" if is_mb_time else "\n⚠️ <i>(ညပိုင်း Order ဖြစ်ပါသည် - MB/Data ဖြစ်ပါက မနက် 7:00 တွင် ထည့်ပေးရန်)</i>"
+
     order_msg = (
         f"📦 <b>Data / Bill အော်ဒါအသစ် ဝင်ပါသည်</b>\n\n"
         f"📱 ထည့်ပေးရမည့်ဖုန်း (နှိပ်၍ Copy ယူပါ):\n"
         f"👉 <code>{target_phone}</code>\n\n"
         f"🎁 Package: <b>{pkg_name}</b>\n"
-        f"⚙️ ဝယ်ရမည့် App: <b>{provider}</b>\n"
+        f"⚙️ အမျိုးအစား/App: <b>{provider}</b>\n"
         f"💵 ဖြတ်ထားသောငွေ: {price:,} Ks\n"
         f"👤 ဝယ်သူအကောင့်: <code>{user_phone}</code>\n"
-        f"🕒 အချိန်: {get_mm_time()}"
+        f"🕒 အချိန်: {get_mm_time()}{time_note}"
     )
     data_bot.send_message(DATA_ADMIN_ID, order_msg, parse_mode="HTML", reply_markup=markup)
 
-    return jsonify({"status": "success", "msg": "အော်ဒါတင်ပြီးပါပြီ။ မကြာမီ သင့်ဖုန်းသို့ ရောက်ရှိလာပါမည်။"})
+    if is_mb_time or provider == "Any Bill" or "ဖုန်းဘေလ်" in pkg_name:
+        reply_msg = "✅ အော်ဒါတင်ပြီးပါပြီ။ မကြာမီ သင့်ဖုန်းသို့ ရောက်ရှိလာပါမည်။"
+    else:
+        reply_msg = "✅ အော်ဒါလက်ခံရရှိပါပြီ! MB/Data ထည့်သွင်းချိန်သည် မနက် 7:00 မှ ည 7:00 အတွင်း ဖြစ်သောကြောင့် မနက် 7:00 နာရီတွင် ဦးစားပေး ပို့ဆောင်ပေးပါမည်။"
+
+    return jsonify({"status": "success", "msg": reply_msg})
 
 # ================= 5. MLBB CUSTOM MATCH =================
 @app.route('/mlbb/matches', methods=['GET'])
