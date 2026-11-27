@@ -31,11 +31,12 @@
         .section-box { background: #ffffff; padding: 14px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 14px; }
         .section-title { font-size: 15px; font-weight: bold; color: #0d47a1; border-bottom: 2px solid #eef6ff; padding-bottom: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
 
-        /* Operator Switcher (Mytel / Atom) */
-        .op-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-        .op-btn { padding: 11px; font-size: 14px; background: #f1f3f5; color: #495057; border: 2px solid transparent; margin: 0; }
+        /* Operator Switcher (Mytel / Atom / Any Bill) */
+        .op-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+        .op-btn { padding: 10px 4px; font-size: 13px; background: #f1f3f5; color: #495057; border: 2px solid transparent; margin: 0; }
         .op-btn.active-mytel { background: #fff0e6; color: #ff6b00; border-color: #ff6b00; }
         .op-btn.active-atom { background: #e6f2ff; color: #0056b3; border-color: #0056b3; }
+        .op-btn.active-any { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
 
         /* Sub-category Tabs */
         .sub-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -107,7 +108,7 @@
 <div class="container">
     <div class="notice-bar">
         <marquee behavior="scroll" direction="left" scrollamount="5">
-            📢 Order ထည့်ချိန် - နေ့စဉ် မနက် 7:00 မှ ည 7:00 အထိသာ ဖြစ်ပါသည်။ ⚠️ Atom Data ဝယ်ယူရာတွင် ဘေလ်ချေးထားသော ဖုန်းနံပါတ်များ မရပါ။ 💱 ငွေချိန်းနှင့် MytelPay ဖြည့်သွင်းရာတွင် 300 Ks အပိုလွှဲပေးရပါမည်။
+            📢 24 နာရီ (24Hr) အချိန်မရွေး Order တင်နိုင်ပါပြီ! ⏰ MB/Data များကို မနက် 7:00 မှ ည 7:00 အတွင်း ထည့်သွင်းပေးပါသည်။ 📱 Any Bill (All Operators) 1,000 Ks = 980 Ks ဖြင့် ဝယ်ယူနိုင်ပါပြီ။
         </marquee>
     </div>
 
@@ -143,14 +144,15 @@
             <!-- ==================== PAGE 1: DATA / BILL / PLAN ဝယ်ယူရန် ==================== -->
             <div id="page-shop">
                 <div class="section-box">
-                    <div class="section-title">🛒 Data / Bill / Plan ဝယ်ယူရန်</div>
+                    <div class="section-title">🛒 Data / Any Bill / Plan ဝယ်ယူရန် (24Hr)</div>
                     <label>ထည့်သွင်းမည့် ဖုန်းနံပါတ် ရိုက်ထည့်ပါ:</label>
-                    <input type="tel" id="target-phone" placeholder="ဥပမာ - 096xxxxxxxx / 097xxxxxxxx">
+                    <input type="tel" id="target-phone" placeholder="ဥပမာ - 09xxxxxxxxx">
 
-                    <label>Operator ရွေးချယ်ပါ:</label>
+                    <label>အမျိုးအစား ရွေးချယ်ပါ:</label>
                     <div class="op-grid">
                         <button id="op-mytel" class="op-btn active-mytel" onclick="selectOperator('mytel')">🟠 Mytel</button>
                         <button id="op-atom" class="op-btn" onclick="selectOperator('atom')">🔵 Atom</button>
+                        <button id="op-any" class="op-btn" onclick="selectOperator('any')">📱 Any Bill</button>
                     </div>
 
                     <!-- Sub-tabs Container -->
@@ -505,6 +507,7 @@
         currentOperator = op;
         document.getElementById('op-mytel').className = op === 'mytel' ? 'op-btn active-mytel' : 'op-btn';
         document.getElementById('op-atom').className = op === 'atom' ? 'op-btn active-atom' : 'op-btn';
+        document.getElementById('op-any').className = op === 'any' ? 'op-btn active-any' : 'op-btn';
 
         const subContainer = document.getElementById('sub-tabs-container');
         if (op === 'mytel') {
@@ -515,7 +518,7 @@
                 <button id="sub-mytel_plan" class="sub-btn" onclick="loadSubPackages('mytel_plan')">Plan</button>
             `;
             loadSubPackages('mytel_bill');
-        } else {
+        } else if (op === 'atom') {
             subContainer.innerHTML = `
                 <button id="sub-atom_bill" class="sub-btn active" onclick="loadSubPackages('atom_bill')">Ph Bill</button>
                 <button id="sub-atom_normal" class="sub-btn" onclick="loadSubPackages('atom_normal')">Normal</button>
@@ -524,6 +527,11 @@
                 <button id="sub-atom_otp" class="sub-btn" onclick="loadSubPackages('atom_otp')">OTP Data</button>
             `;
             loadSubPackages('atom_bill');
+        } else {
+            subContainer.innerHTML = `
+                <button id="sub-any_bill" class="sub-btn active" onclick="loadSubPackages('any_bill')">All Operators Ph Bill</button>
+            `;
+            loadSubPackages('any_bill');
         }
     }
 
@@ -536,6 +544,13 @@
         const noteBox = document.getElementById('shop-note-box');
         let notes = [];
 
+        // 24Hr Order & MB/Data အချိန် မှတ်ချက်
+        if (subCat.includes('normal') || subCat.includes('plan') || subCat.includes('otp') || subCat.includes('point') || subCat.includes('min')) {
+            notes.push("⏰ <b>အချိန်မှတ်ချက်:</b> 24 နာရီ Order တင်နိုင်ပါသည်။ MB/Data များကို မနက် 7:00 မှ ည 7:00 အတွင်း ထည့်သွင်းပေးပါမည်။");
+        } else if (subCat === 'any_bill') {
+            notes.push("📱 <b>Any Bill:</b> Mytel, Atom, Ooredoo, MPT မည်သည့် Operator မဆို 1,000 Ks = 980 Ks ဖြင့် ၂၄ နာရီ ဝယ်ယူနိုင်ပါသည်။");
+        }
+
         if (currentOperator === 'atom') {
             notes.push("⚠️ <b>Atom သတိပြုရန်:</b> ဘေလ်ချေးထားသော (ကြိုသုံးယူထားသော) ဆင်းမ်ကတ်များ ထည့်သွင်း၍ မရပါ။");
         }
@@ -546,7 +561,7 @@
             notes.push("📌 <b>မှတ်ချက်:</b> တစ်နေ့လျှင် တစ်ကြိမ်သာ ထည့်သွင်း၍ ရပါမည်။");
         }
         if (subCat === 'atom_otp') {
-            notes.push("📌 <b>မှတ်ချက်:</b> တနင်္လာ နှင့် အင်္ဂါ (၂) ရက်သာ ရပါမည်။ OTP တစ်ကြိမ်ယူပါသည် — ဖုန်းဆက်ပေးပါမည်။ (ဆတိုး အကြိုက်ရ)။");
+            notes.push("📌 <b>မှတ်ချက်:</b> တနင်္လာ နှင့် အင်္ဂါ (၂) ရက်သာ ရပါမည်။ OTP တစ်ကြိမ်ယူပါသည် — ဖုန်းဆက်ပေးပါမယ် (ဆတိုး အကြိုက်ရ)။");
         }
 
         if (notes.length > 0) {
@@ -574,7 +589,7 @@
     async function buyPackage(pkgName, price, provider) {
         const targetPhone = document.getElementById('target-phone').value.trim();
         if (!targetPhone) return alert("ထည့်သွင်းမည့် ဖုန်းနံပါတ်ကို အရင်ရိုက်ထည့်ပါ။");
-        if (!/^09\d{9}$/.test(targetPhone)) return alert("⚠️ 09 ဖြင့်စသော ဂဏန်း (၁၁) လုံး အတိအကျ ရိုက်ထည့်ပါ။");
+        if (!/^09\d{7,9}$/.test(targetPhone)) return alert("⚠️ 09 ဖြင့်စသော ဖုန်းနံပါတ် မှန်ကန်စွာ ရိုက်ထည့်ပါ။");
 
         if (currentOperator === 'mytel' && !targetPhone.startsWith("096")) return alert("⚠️ Mytel အတွက် 096 ဖြင့်စသော ဖုန်းနံပါတ်ကိုသာ ထည့်သွင်းပါ။");
         if (currentOperator === 'atom' && !targetPhone.startsWith("097")) return alert("⚠️ Atom အတွက် 097 ဖြင့်စသော ဖုန်းနံပါတ်ကိုသာ ထည့်သွင်းပါ။");
