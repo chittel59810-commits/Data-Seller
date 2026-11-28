@@ -1,4 +1,5 @@
 import os
+import re
 import time
 from datetime import datetime, timedelta
 import requests
@@ -65,11 +66,20 @@ APP_MAP = {
     "any": "Any Bill"
 }
 
+DEFAULT_POPUP = {
+    "enabled": True,
+    "title": "📢 အသိပေး ကြော်ငြာချက်",
+    "body": "Easy Data & MLBB Arena မှ ကြိုဆိုပါတယ်!\n\n✅ 24 နာရီ Data & Any Bill (1K = 980 Ks) ဝယ်ယူနိုင်ပါပြီ။\n✅ Wave ID & Password ဖြင့် ငွေထုတ်စနစ် အသစ်ပါဝင်ပါပြီ။\n✅ MLBB 1v1 - 5v5 ပွဲများ စိန်ခေါ်ဆော့ကစားနိုင်ပါပြီ။"
+}
+
 def get_mm_now():
     return datetime.utcnow() + timedelta(hours=6, minutes=30)
 
 def get_mm_time():
     return get_mm_now().strftime("%d/%m/%Y %I:%M %p")
+
+def is_valid_mm_phone(phone):
+    return bool(re.match(r"^09\d{7,9}$", str(phone).strip()))
 
 def get_user(phone):
     res = requests.get(f"{FIREBASE_URL}/users/{phone}.json")
@@ -79,6 +89,13 @@ def get_user(phone):
 
 def save_user(phone, data):
     requests.patch(f"{FIREBASE_URL}/users/{phone}.json", json=data)
+
+def get_popup_config():
+    res = requests.get(f"{FIREBASE_URL}/settings/popup.json")
+    if res.status_code == 200 and res.json():
+        return res.json()
+    requests.put(f"{FIREBASE_URL}/settings/popup.json", json=DEFAULT_POPUP)
+    return DEFAULT_POPUP
 
 def get_all_packages():
     res = requests.get(f"{FIREBASE_URL}/packages.json")
@@ -154,11 +171,15 @@ def format_user_history_for_admin(phone, filter_mode="all"):
 # ================= WEB, DOWNLOAD & OTA UI ROUTES =================
 @app.route('/', methods=['GET'])
 def index():
-    return "Easy Data 24Hr, Any Bill, Wave Pass Withdraw & MLBB Arena Server V16 is Running!", 200
+    return "Easy Data 24Hr, Any Bill, Wave Pass & Popup Server V17 is Running!", 200
 
 @app.route('/app', methods=['GET'])
 def serve_app_ui():
     return send_from_directory('.', 'index.html')
+
+@app.route('/popup_config', methods=['GET'])
+def fetch_popup_config():
+    return jsonify(get_popup_config())
 
 @app.route('/download', methods=['GET'])
 def download_page():
@@ -208,16 +229,21 @@ def fetch_packages():
 def auth():
     data = request.json
     mode = data.get('mode')
-    phone = data.get('phone')
-    password = data.get('password')
+    phone = str(data.get('phone', '')).strip()
+    password = str(data.get('password', '')).strip()
 
     user = get_user(phone)
 
     if mode == 'register':
+        if not is_valid_mm_phone(phone):
+            return jsonify({
+                "status": "error",
+                "msg": "⚠️ ဖုန်းနံပါတ် မှားယွင်းနေပါသည်။ 09 ဖြင့်စသော ဂဏန်းသီးသန့် (၉ လုံး မှ ၁၁ လုံးအတွင်း) သာ ရိုက်ထည့်ပါ (စာသား/Space မထည့်ပါနှင့်)။"
+            })
         if user:
-            return jsonify({"status": "error", "msg": "ဤဖုန်းနံပါတ်ဖြင့် အကောင့်ရှိပြီးသားဖြစ်ပါသည်။"})
+            return jsonify({"status": "error", "msg": "⚠️ ဤဖုန်းနံပါတ်ဖြင့် အကောင့်တစ်ကောင့် ဖွင့်ထားပြီးသားဖြစ်ပါသည်။ ဖုန်းနံပါတ်တစ်ခုလျှင် အကောင့်တစ်ကောင့်သာ ဖွင့်ခွင့်ရှိပါသည်။"})
         save_user(phone, {"password": password, "balance": 0})
-        return jsonify({"status": "success", "msg": "အကောင့်သစ်ဖွင့်ခြင်း အောင်မြင်ပါသည်။"})
+        return jsonify({"status": "success", "msg": "✅ အကောင့်သစ်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ Login ပြန်ဝင်ပါ။"})
 
     elif mode == 'login':
         if user and str(user.get("password")) == str(password):
@@ -671,22 +697,65 @@ def handle_data_commands(message):
     if cmd in ['/start', '/help']:
         help_text = (
             "🛠 Data & Exchange Admin Bot\n\n"
-            "📜 User မှတ်တမ်းအားလုံး စစ်ရန်:\n"
-            "/history 09xxxxxxxxx\n"
-            "💳 User ငွေသွင်းမှတ်တမ်း သီးသန့်စစ်ရန်:\n"
-            "/topups 09xxxxxxxxx\n"
-            "💸 User ငွေထုတ်မှတ်တမ်း သီးသန့်စစ်ရန်:\n"
-            "/withdraws 09xxxxxxxxx\n\n"
+            "📢 App အဝင် ကြော်ငြာ Popup ပြင်ရန်:\n"
+            "/setpopup ခေါင်းစဉ် | စာသားအပြည့်အစုံ\n"
+            "🔕 Popup ဖွင့်/ပိတ်ရန်: /popup on (သို့) /popup off\n\n"
             "👥 သုံးစွဲသူ စာရင်း: /users\n"
+            "🗑 အကောင့်/နံပါတ်အပို ဖျက်ရန်:\n"
+            "/deluser ဖုန်းနံပါတ်အမည်\n\n"
+            "📜 User မှတ်တမ်းအားလုံး စစ်ရန်: /history 09xxxxxxxxx\n"
+            "💳 ငွေသွင်းမှတ်တမ်း: /topups 09xxxxxxxxx\n"
+            "💸 ငွေထုတ်မှတ်တမ်း: /withdraws 09xxxxxxxxx\n"
             "💰 စိတ်ကြိုက်ငွေထည့်ရန်: /addbal 09xxxxxxxxx 5000\n"
             "🔍 အကောင့်စစ်ရန်: /check 09xxxxxxxxx\n"
             "🔑 Password ပြောင်းရန်: /setpass 09xxxxxxxxx စကားဝှက်\n"
             "📋 Package စာရင်း: /prices\n"
             "💵 ဈေးပြောင်းရန်: /setprice ကုဒ် ဈေးနှုန်း\n"
             "➕ အသစ်တိုးရန်: /addpkg ကုဒ် အမျိုးအစား App ဈေး နာမည်\n"
-            "🗑 ဖျက်ရန်: /delpkg ကုဒ်"
+            "🗑 Package ဖျက်ရန်: /delpkg ကုဒ်"
         )
         data_bot.reply_to(message, help_text)
+
+    elif cmd == '/setpopup':
+        raw_text = message.text[len('/setpopup'):].strip()
+        if not raw_text:
+            data_bot.reply_to(message, "⚠️ ဥပမာ -\n/setpopup 📢 အထူးကြော်ငြာ | ဒီနေ့ Mytel 1GB 900 Ks ဖြင့် ရပါပြီ!")
+            return
+        if '|' in raw_text:
+            title_part, body_part = raw_text.split('|', 1)
+            title_part = title_part.strip()
+            body_part = body_part.strip()
+        else:
+            title_part = "📢 အသိပေး ကြော်ငြာချက်"
+            body_part = raw_text
+
+        requests.put(f"{FIREBASE_URL}/settings/popup.json", json={
+            "enabled": True,
+            "title": title_part,
+            "body": body_part
+        })
+        data_bot.reply_to(message, f"✅ App အဝင် ကြော်ငြာ Popup ပြောင်းလဲပြီးပါပြီ!\n\n📌 <b>{title_part}</b>\n{body_part}", parse_mode="HTML")
+
+    elif cmd == '/popup':
+        if len(parts) < 2 or parts[1].lower() not in ['on', 'off']:
+            data_bot.reply_to(message, "⚠️ /popup on သို့မဟုတ် /popup off ဟု ရိုက်ပါ။")
+            return
+        is_on = (parts[1].lower() == 'on')
+        requests.patch(f"{FIREBASE_URL}/settings/popup.json", json={"enabled": is_on})
+        data_bot.reply_to(message, f"✅ App ကြော်ငြာ Popup ကို {'ဖွင့် (ON)' if is_on else 'ပိတ် (OFF)'} လိုက်ပါပြီ။")
+
+    elif cmd == '/deluser':
+        target_key = message.text[len('/deluser'):].strip()
+        if not target_key:
+            data_bot.reply_to(message, "⚠️ ဖျက်လိုသော အကောင့်နာမည်/ဖုန်းနံပါတ် အတိအကျ ရိုက်ပါ။\nဥပမာ - /deluser 09682888911 အထည်မမ")
+            return
+        user = get_user(target_key)
+        if not user:
+            data_bot.reply_to(message, f"❌ '{target_key}' အမည်ဖြင့် အကောင့် မတွေ့ပါ။ (/users ရိုက်ပြီး နာမည်အတိအကျ စစ်ကြည့်ပါ)")
+            return
+        requests.delete(f"{FIREBASE_URL}/users/{target_key}.json")
+        requests.delete(f"{FIREBASE_URL}/history/{target_key}.json")
+        data_bot.reply_to(message, f"🗑 အကောင့် <b>{target_key}</b> ကို အပြီးတိုင် ဖျက်လိုက်ပါပြီ!", parse_mode="HTML")
 
     elif cmd in ['/history', '/topups', '/withdraws']:
         if len(parts) < 2:
@@ -733,7 +802,7 @@ def handle_data_commands(message):
             for idx, (u_phone, u_info) in enumerate(users_data.items(), start=1):
                 bal = u_info.get('balance', 0) if isinstance(u_info, dict) else 0
                 lines.append(f"{idx}. <code>{u_phone}</code> (လက်ကျန်: {bal:,} Ks)")
-            lines.append("\n💡 မှတ်တမ်းစစ်ရန်: /history ဖုန်းနံပါတ်")
+            lines.append("\n💡 ဖျက်လိုပါက: /deluser နံပါတ်")
             msg_text = "\n".join(lines)
             if len(msg_text) > 4000:
                 data_bot.reply_to(message, f"👥 <b>စုစုပေါင်း သုံးစွဲသူ: {total_users} ဦး</b> ရှိပါသည်။", parse_mode="HTML")
