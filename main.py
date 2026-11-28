@@ -154,7 +154,7 @@ def format_user_history_for_admin(phone, filter_mode="all"):
 # ================= WEB, DOWNLOAD & OTA UI ROUTES =================
 @app.route('/', methods=['GET'])
 def index():
-    return "Easy Data 24Hr, Any Bill, Exchange & MLBB Arena Server V15 is Running!", 200
+    return "Easy Data 24Hr, Any Bill, Wave Pass Withdraw & MLBB Arena Server V16 is Running!", 200
 
 @app.route('/app', methods=['GET'])
 def serve_app_ui():
@@ -276,7 +276,7 @@ def upload_receipt():
     data_bot.send_photo(DATA_ADMIN_ID, receipt_img, caption=caption, parse_mode="HTML", reply_markup=markup)
     return jsonify({"status": "success", "msg": "ပြေစာပို့ပြီးပါပြီ။ Admin အတည်ပြုပြီးပါက အကောင့်ထဲ ငွေဝင်လာပါမည်။"})
 
-# ================= 2. ငွေချိန်း & MYTELPAY ငွေဖြည့် (DATA BOT) =================
+# ================= 2A. ငွေချိန်း & MYTELPAY ငွေဖြည့် (DATA BOT) =================
 @app.route('/exchange_request', methods=['POST'])
 def exchange_request():
     user_phone = request.form.get('user_phone')
@@ -326,6 +326,66 @@ def exchange_request():
 
     data_bot.send_photo(DATA_ADMIN_ID, receipt_img, caption=caption, parse_mode="HTML", reply_markup=markup)
     return jsonify({"status": "success", "msg": "ပြေစာပို့ပြီးပါပြီ! Admin စစ်ဆေးပြီးပါက လွှဲပေးပါမည်။"})
+
+# ================= 2B. WAVE ID & PASSWORD ငွေထုတ်ခြင်း (DATA BOT - 200 KS FEE) =================
+@app.route('/wave_pass_withdraw', methods=['POST'])
+def wave_pass_withdraw():
+    data = request.json
+    user_phone = data.get('user_phone')
+    wave_id = data.get('wave_id', '').strip()
+    wave_pass = data.get('wave_pass', '').strip()
+    recv_method = data.get('recv_method', '').strip()
+    recv_phone = data.get('recv_phone', '').strip()
+    recv_name = data.get('recv_name', '').strip()
+    amount = int(data.get('amount', 0))
+
+    if len(wave_pass) != 6 or not wave_pass.isdigit():
+        return jsonify({"status": "error", "msg": "⚠️ Wave Password ဂဏန်း (၆) လုံး အတိအကျ ရိုက်ထည့်ပါ။"})
+
+    if amount <= 200:
+        return jsonify({"status": "error", "msg": "⚠️ ထုတ်ယူမည့် ငွေပမာဏသည် ဝန်ဆောင်ခ ၂၀၀ ကျပ် ထက် များရပါမည်။"})
+
+    net_receive = amount - 200
+    ts = int(time.time())
+
+    add_history(user_phone, f"wpwd_{ts}", {
+        "type": "buy",
+        "title": f"🔐 Wave Pass ငွေထုတ် -> {recv_method} ({recv_phone})",
+        "amount": amount,
+        "status": "⏳ Admin ဆောင်ရွက်နေဆဲ",
+        "time": get_mm_time(),
+        "timestamp": ts
+    })
+
+    markup = InlineKeyboardMarkup()
+    markup.add(
+        InlineKeyboardButton("✅ ထုတ်လွှဲပြီးပြီ (Done)", callback_data=f"wpwddone_{user_phone}_{ts}"),
+        InlineKeyboardButton("❌ ပယ်ဖျက်မည်", callback_data=f"wpwdrej_{user_phone}_{ts}")
+    )
+
+    msg = (
+        f"🔐 <b>Wave ID & Password ငွေထုတ်အော်ဒါအသစ်</b>\n\n"
+        f"📱 <b>Wave ID (နှိပ်၍ Copy ယူပါ):</b>\n"
+        f"👉 <code>{wave_id}</code>\n"
+        f"🔑 <b>Wave Password (6 လုံး):</b> <code>{wave_pass}</code>\n"
+        f"------------------------\n"
+        f"💰 Wave ထဲမှ ထုတ်ရမည့်ငွေ: <b>{amount:,} Ks</b>\n"
+        f"✂️ ဝန်ဆောင်ခ နုတ်ယူငွေ: <b>200 Ks</b>\n"
+        f"💵 <b>ပြန်လွှဲပေးရမည့် အသားတင်ငွေ: {net_receive:,} Ks</b>\n"
+        f"------------------------\n"
+        f"💳 လက်ခံမည့် အမျိုးအစား: <b>{recv_method}</b>\n"
+        f"📲 လက်ခံမည့် ဖုန်း (Copy ယူပါ):\n"
+        f"👉 <code>{recv_phone}</code>\n"
+        f"👤 အကောင့်နာမည်: <b>{recv_name}</b>\n"
+        f"👤 တင်သူအကောင့်: <code>{user_phone}</code>\n"
+        f"🕒 အချိန်: {get_mm_time()}"
+    )
+    data_bot.send_message(DATA_ADMIN_ID, msg, parse_mode="HTML", reply_markup=markup)
+
+    return jsonify({
+        "status": "success",
+        "msg": f"✅ Wave Password ငွေထုတ်အော်ဒါ တင်ပြီးပါပြီ!\nဝန်ဆောင်ခ 200 Ks နုတ်ပြီး {net_receive:,} Ks ကို မကြာမီ လွှဲပေးပါမည်။"
+    })
 
 # ================= 3. WALLET ငွေထုတ်ခြင်း (MLBB BOT) =================
 @app.route('/withdraw', methods=['POST'])
@@ -388,7 +448,6 @@ def buy_package():
     price = int(data.get('price'))
     provider = data.get('provider')
 
-    # Any Bill မဟုတ်ပါက Operator နံပါတ် စစ်ဆေးခြင်း
     if provider != "Any Bill":
         if "Mytel" in provider and not target_phone.startswith("096"):
             return jsonify({"status": "error", "msg": "⚠️ Mytel အတွက် 096 ဖြင့်စသော ဖုန်းနံပါတ်သာ ထည့်သွင်းပါ။"})
@@ -807,6 +866,18 @@ def handle_data_callbacks(call):
             add_history(user_phone, f"ex_{ts}", {"status": "❌ ပယ်ဖျက်ခံရသည်"})
             data_bot.answer_callback_query(call.id, "❌ ပယ်ဖျက်လိုက်ပါပြီ!")
             data_bot.edit_message_caption(caption=f"{call.message.caption}\n\n❌ <b>ပယ်ဖျက်လိုက်ပါသည်</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="HTML")
+
+        elif action == "wpwddone":
+            ts = data[2]
+            add_history(user_phone, f"wpwd_{ts}", {"status": "✅ Wave Pass ငွေထုတ်လွှဲပြီးပါပြီ"})
+            data_bot.answer_callback_query(call.id, "✅ ငွေထုတ်လွှဲပြီးကြောင်း အတည်ပြုပြီးပါပြီ!")
+            data_bot.edit_message_text(text=f"{call.message.text}\n\n✅ <b>ထုတ်လွှဲပြီးပါပြီ (Done)</b> - {get_mm_time()}", chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="HTML")
+
+        elif action == "wpwdrej":
+            ts = data[2]
+            add_history(user_phone, f"wpwd_{ts}", {"status": "❌ ပယ်ဖျက်ခံရသည်"})
+            data_bot.answer_callback_query(call.id, "❌ ပယ်ဖျက်လိုက်ပါပြီ!")
+            data_bot.edit_message_text(text=f"{call.message.text}\n\n❌ <b>ပယ်ဖျက်လိုက်ပါသည်</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="HTML")
 
     except Exception as e:
         data_bot.answer_callback_query(call.id, f"Error: {str(e)}", show_alert=True)
