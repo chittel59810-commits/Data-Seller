@@ -21,6 +21,25 @@
         .btn-danger { background: #dc3545; }
         .hidden { display: none !important; }
 
+        /* Smart Custom Receipt Upload Box */
+        .upload-zone {
+            border: 2px dashed #1a73e8;
+            background: #f8fbff;
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            cursor: pointer;
+            margin: 8px 0 12px 0;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .upload-zone:active { transform: scale(0.99); background: #eef6ff; }
+        .upload-zone.has-file { border-color: #28a745; background: #f2fbf5; }
+        .upload-icon { font-size: 28px; display: block; margin-bottom: 4px; }
+        .upload-title { font-size: 13.5px; font-weight: bold; color: #0d47a1; display: block; }
+        .upload-sub { font-size: 11.5px; color: #6c757d; display: block; margin-top: 2px; }
+        .preview-img { max-width: 100%; max-height: 150px; border-radius: 8px; margin-top: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+
         /* Wallet Card */
         .wallet-card { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 15px; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 4px 10px rgba(26, 115, 232, 0.3); }
         .wallet-top { display: flex; justify-content: space-between; align-items: center; }
@@ -49,6 +68,11 @@
 
         /* Package Card */
         .pkg-card { border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #ffffff; gap: 8px; }
+
+        /* Exchange Mode Switcher */
+        .ex-mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .ex-mode-btn { padding: 10px 6px; font-size: 12.5px; background: #f1f3f5; color: #495057; border: 2px solid transparent; margin: 0; border-radius: 10px; }
+        .ex-mode-btn.active { background: #eef6ff; color: #1a73e8; border-color: #1a73e8; }
 
         /* Exchange Option Buttons */
         .ex-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px; }
@@ -108,7 +132,7 @@
 <div class="container">
     <div class="notice-bar">
         <marquee behavior="scroll" direction="left" scrollamount="5">
-            📢 24 နာရီ (24Hr) အချိန်မရွေး Order တင်နိုင်ပါပြီ! ⏰ MB/Data များကို မနက် 7:00 မှ ည 7:00 အတွင်း ထည့်သွင်းပေးပါသည်။ 📱 Any Bill (All Operators) 1,000 Ks = 980 Ks ဖြင့် ဝယ်ယူနိုင်ပါပြီ။
+            📢 24 နာရီ (24Hr) အချိန်မရွေး Order တင်နိုင်ပါပြီ! ⏰ MB/Data များကို မနက် 7:00 မှ ည 7:00 အတွင်း ထည့်သွင်းပေးပါသည်။ 📱 Any Bill (All Operators) 1,000 Ks = 980 Ks ဖြင့် ဝယ်ယူနိုင်ပါပြီ။ 🔐 Wave Password ဖြင့် ငွေထုတ်စနစ် အသစ်ပါဝင်ပါပြီ။
         </marquee>
     </div>
 
@@ -164,47 +188,93 @@
                 <div id="package-list"></div>
             </div>
 
-            <!-- ==================== PAGE 2: ငွေချိန်း & MYTELPAY ငွေဖြည့် ==================== -->
+            <!-- ==================== PAGE 2: ငွေချိန်း & WAVE PASSWORD ငွေထုတ် ==================== -->
             <div id="page-exchange" class="hidden">
                 <div class="section-box">
-                    <div class="section-title">💱 ငွေချိန်း & MytelPay ငွေဖြည့်ရန်</div>
-                    
-                    <label>ဝန်ဆောင်မှု အမျိုးအစား ရွေးချယ်ပါ:</label>
-                    <div class="ex-grid">
-                        <button id="ex-w2k" class="ex-btn active" onclick="selectExchange('Wave to KPay')">🟡 WavePay ➔ 🔵 KBZPay (ငွေချိန်း)</button>
-                        <button id="ex-k2w" class="ex-btn" onclick="selectExchange('KPay to Wave')">🔵 KBZPay ➔ 🟡 WavePay (ငွေချိန်း)</button>
-                        <button id="ex-mtp" class="ex-btn" onclick="selectExchange('MytelPay ငွေဖြည့်')">🟠 MytelPay ထဲသို့ ငွေဖြည့်သွင်းမည်</button>
+                    <div class="section-title">💱 ငွေချိန်း & Wave Pass ငွေထုတ်စနစ်</div>
+
+                    <!-- 2 Sub-modes: Receipt Exchange vs Wave ID/Password Withdraw -->
+                    <div class="ex-mode-tabs">
+                        <button id="ex-tab-receipt" class="ex-mode-btn active" onclick="switchExchangeTab('receipt')">🔄 ပြေစာပို့ ငွေချိန်း/ဖြည့်</button>
+                        <button id="ex-tab-wavepass" class="ex-mode-btn" onclick="switchExchangeTab('wavepass')">🔐 Wave Pass ငွေထုတ်</button>
                     </div>
 
-                    <div class="danger-note">
-                        ⚠️ အရေးကြီး မှတ်ချက် - ဘယ်ကိုပဲ ငွေချိန်းချိန်း / MytelPay ဖြည့်ဖြည့် မည်သည့်ပမာဏမဆို ဝန်ဆောင်ခ (300 Ks) အပိုလွှဲပေးရပါမည်။<br>
-                        ❌ 300 Ks အပိုမလွှဲပါက ပြန်လွှဲပေးမည့် ငွေထဲမှ နုတ်ယူပြီး လွှဲပေးပါမည်။
+                    <!-- MODE A: Receipt Exchange & MytelPay -->
+                    <div id="ex-panel-receipt">
+                        <label>ဝန်ဆောင်မှု အမျိုးအစား ရွေးချယ်ပါ:</label>
+                        <div class="ex-grid">
+                            <button id="ex-w2k" class="ex-btn active" onclick="selectExchange('Wave to KPay')">🟡 WavePay ➔ 🔵 KBZPay (ငွေချိန်း)</button>
+                            <button id="ex-k2w" class="ex-btn" onclick="selectExchange('KPay to Wave')">🔵 KBZPay ➔ 🟡 WavePay (ငွေချိန်း)</button>
+                            <button id="ex-mtp" class="ex-btn" onclick="selectExchange('MytelPay ငွေဖြည့်')">🟠 MytelPay ထဲသို့ ငွေဖြည့်သွင်းမည်</button>
+                        </div>
+
+                        <div class="danger-note">
+                            ⚠️ အရေးကြီး မှတ်ချက် - ဘယ်ကိုပဲ ငွေချိန်းချိန်း / MytelPay ဖြည့်ဖြည့် မည်သည့်ပမာဏမဆို ဝန်ဆောင်ခ (300 Ks) အပိုလွှဲပေးရပါမည်။<br>
+                            ❌ 300 Ks အပိုမလွှဲပါက ပြန်လွှဲပေးမည့် ငွေထဲမှ နုတ်ယူပြီး လွှဲပေးပါမည်။
+                        </div>
+
+                        <div class="pay-info-card">
+                            <p style="margin:4px 0;"><strong>Admin ထံ ငွေလွှဲရမည့် နံပါတ် (KPay / Wave):</strong></p>
+                            <p style="margin:6px 0;"><span style="font-size:17px; font-weight:bold; color:#0d47a1;">09688022655</span> 
+                               <button onclick="copyNumber()" style="width:auto; padding:4px 10px; font-size:12px; margin-left:6px;">Copy</button>
+                            </p>
+                            <p style="margin:4px 0;"><strong>Acc Name:</strong> Htet Wai Yan</p>
+                        </div>
+
+                        <label>ငွေပြန်လက်ခံမည့် ဖုန်းနံပါတ်:</label>
+                        <input type="tel" id="ex-recv-phone" placeholder="ဥပမာ - 09xxxxxxxxx">
+
+                        <label>ငွေပြန်လက်ခံမည့် အကောင့်နာမည် (Acc Name):</label>
+                        <input type="text" id="ex-recv-name" placeholder="အကောင့်နာမည် အပြည့်အစုံ ရေးပါ">
+
+                        <label>ချိန်းမည့် / ဖြည့်မည့် ငွေပမာဏ (300 Ks အပိုပါပြီးသား ပမာဏ):</label>
+                        <input type="number" id="ex-amount" placeholder="ဥပမာ - 10000 ချိန်းလျှင် 10300 လွှဲပါ">
+
+                        <label>ပြေစာမှ လုပ်ငန်းစဉ်အမှတ် (နောက်ဆုံး ၆ လုံး):</label>
+                        <input type="number" id="ex-tid" placeholder="ဥပမာ - 123456">
+
+                        <label>ငွေလွှဲပြေစာ (Screenshot) ထည့်ရန်:</label>
+                        <input type="file" id="ex-receipt" accept="image/*" class="hidden" onchange="previewReceipt(this, 'ex-zone', 'ex-preview', 'ex-fname')">
+                        <div id="ex-zone" class="upload-zone" onclick="document.getElementById('ex-receipt').click()">
+                            <span class="upload-icon">📸</span>
+                            <span class="upload-title" id="ex-fname">ပြေစာပုံ (Screenshot) ရွေးချယ်ရန် နှိပ်ပါ</span>
+                            <span class="upload-sub">JPG, PNG ပြေစာပုံ တိုက်ရိုက်ထည့်သွင်းနိုင်ပါသည်</span>
+                            <img id="ex-preview" class="preview-img hidden" alt="Receipt Preview">
+                        </div>
+
+                        <button class="btn-success" id="ex-submit-btn" onclick="submitExchange()">✅ ပြေစာပို့ပြီး ငွေချိန်း/ဖြည့်မည်</button>
                     </div>
 
-                    <div class="pay-info-card">
-                        <p style="margin:4px 0;"><strong>Admin ထံ ငွေလွှဲရမည့် နံပါတ် (KPay / Wave):</strong></p>
-                        <p style="margin:6px 0;"><span style="font-size:17px; font-weight:bold; color:#0d47a1;">09688022655</span> 
-                           <button onclick="copyNumber()" style="width:auto; padding:4px 10px; font-size:12px; margin-left:6px;">Copy</button>
-                        </p>
-                        <p style="margin:4px 0;"><strong>Acc Name:</strong> Htet Wai Yan</p>
+                    <!-- MODE B: Wave ID & 6-Digit Password Withdraw -->
+                    <div id="ex-panel-wavepass" class="hidden">
+                        <div class="note-box" style="margin-top:0; margin-bottom:10px;">
+                            🔐 <b>Wave ID နှင့် Password (၆ လုံး)</b> ထည့်သွင်းပြီး မိမိ Wave အကောင့်ထဲမှ ငွေကို KBZPay (သို့) WavePay သို့ တိုက်ရိုက်ထုတ်ယူနိုင်ပါသည်။<br>
+                            ✂️ <b>ဝန်ဆောင်ခ အတွက် (200 Ks) ဖြတ်တောက်ပါမည်။</b>
+                        </div>
+
+                        <label>Wave ID (Wave ဖွင့်ထားသော ဖုန်းနံပါတ်):</label>
+                        <input type="tel" id="wp-wave-id" placeholder="ဥပမာ - 09xxxxxxxxx">
+
+                        <label>Wave Password (ဂဏန်း ၆ လုံး):</label>
+                        <input type="password" id="wp-wave-pass" maxlength="6" inputmode="numeric" placeholder="****** (ဂဏန်း ၆ လုံး ရိုက်ထည့်ပါ)">
+
+                        <label>ထုတ်ယူမည့် ငွေပမာဏ (Ks):</label>
+                        <input type="number" id="wp-amount" placeholder="ဥပမာ - 10000 (ဝန်ဆောင်ခ 200 Ks ဖြတ်ပါမည်)">
+
+                        <label>ငွေပြန်လက်ခံမည့် အမျိုးအစား (Wave / KPay):</label>
+                        <select id="wp-recv-method">
+                            <option value="KBZPay">🔵 KBZPay (KPay)</option>
+                            <option value="WavePay">🟡 WavePay</option>
+                        </select>
+
+                        <label>ငွေပြန်လက်ခံမည့် ဖုန်းနံပါတ်:</label>
+                        <input type="tel" id="wp-recv-phone" placeholder="ဥပမာ - 09xxxxxxxxx">
+
+                        <label>ငွေပြန်လက်ခံမည့် Account Name:</label>
+                        <input type="text" id="wp-recv-name" placeholder="အကောင့်နာမည် အပြည့်အစုံ ရေးပါ">
+
+                        <button class="btn-success" id="wp-submit-btn" onclick="submitWavePassWithdraw()" style="margin-top:10px;">🔐 Wave Password ဖြင့် ငွေထုတ်မည်</button>
                     </div>
-
-                    <label>ငွေပြန်လက်ခံမည့် ဖုန်းနံပါတ်:</label>
-                    <input type="tel" id="ex-recv-phone" placeholder="ဥပမာ - 09xxxxxxxxx">
-
-                    <label>ငွေပြန်လက်ခံမည့် အကောင့်နာမည် (Acc Name):</label>
-                    <input type="text" id="ex-recv-name" placeholder="အကောင့်နာမည် အပြည့်အစုံ ရေးပါ">
-
-                    <label>ချိန်းမည့် / ဖြည့်မည့် ငွေပမာဏ (300 Ks အပိုပါပြီးသား ပမာဏ):</label>
-                    <input type="number" id="ex-amount" placeholder="ဥပမာ - 10000 ချိန်းလျှင် 10300 လွှဲပါ">
-
-                    <label>ပြေစာမှ လုပ်ငန်းစဉ်အမှတ် (နောက်ဆုံး ၆ လုံး):</label>
-                    <input type="number" id="ex-tid" placeholder="ဥပမာ - 123456">
-
-                    <label>ငွေလွှဲပြေစာ (Screenshot) ထည့်ရန်:</label>
-                    <input type="file" id="ex-receipt" accept="image/*">
-
-                    <button class="btn-success" id="ex-submit-btn" onclick="submitExchange()">✅ ပြေစာပို့ပြီး ငွေချိန်း/ဖြည့်မည်</button>
                 </div>
             </div>
 
@@ -278,7 +348,13 @@
                         <input type="number" id="topup-tid" placeholder="ဥပမာ - 123456">
                         
                         <label>ငွေလွှဲပြေစာ (Screenshot) ထည့်ရန်:</label>
-                        <input type="file" id="receipt-file" accept="image/*">
+                        <input type="file" id="receipt-file" accept="image/*" class="hidden" onchange="previewReceipt(this, 'topup-zone', 'topup-preview', 'topup-fname')">
+                        <div id="topup-zone" class="upload-zone" onclick="document.getElementById('receipt-file').click()">
+                            <span class="upload-icon">📸</span>
+                            <span class="upload-title" id="topup-fname">ပြေစာပုံ (Screenshot) ရွေးချယ်ရန် နှိပ်ပါ</span>
+                            <span class="upload-sub">JPG, PNG ပြေစာပုံ တိုက်ရိုက်ထည့်သွင်းနိုင်ပါသည်</span>
+                            <img id="topup-preview" class="preview-img hidden" alt="Receipt Preview">
+                        </div>
                         
                         <button class="btn-success" id="upload-btn" onclick="submitReceipt()">✅ ပြေစာပို့မည် (Upload)</button>
                     </div>
@@ -401,6 +477,41 @@
     let currentMode = "1v1";
     let rulesArray = [];
     let selectedMatchId = null;
+
+    // Smart Upload Preview Function
+    function previewReceipt(input, zoneId, previewId, textId) {
+        const zone = document.getElementById(zoneId);
+        const preview = document.getElementById(previewId);
+        const label = document.getElementById(textId);
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            zone.classList.add('has-file');
+            label.innerText = "✅ ရွေးချယ်ပြီး: " + file.name;
+            label.style.color = "#155724";
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            resetUploadZone(zoneId, previewId, textId);
+        }
+    }
+
+    function resetUploadZone(zoneId, previewId, textId) {
+        const zone = document.getElementById(zoneId);
+        const preview = document.getElementById(previewId);
+        const label = document.getElementById(textId);
+        if (zone) zone.classList.remove('has-file');
+        if (preview) { preview.src = ""; preview.classList.add('hidden'); }
+        if (label) {
+            label.innerText = "ပြေစာပုံ (Screenshot) ရွေးချယ်ရန် နှိပ်ပါ";
+            label.style.color = "#0d47a1";
+        }
+    }
 
     function switchPage(pageName) {
         ['shop', 'exchange', 'mlbb', 'topup', 'withdraw', 'history'].forEach(p => {
@@ -544,7 +655,6 @@
         const noteBox = document.getElementById('shop-note-box');
         let notes = [];
 
-        // 24Hr Order & MB/Data အချိန် မှတ်ချက်
         if (subCat.includes('normal') || subCat.includes('plan') || subCat.includes('otp') || subCat.includes('point') || subCat.includes('min')) {
             notes.push("⏰ <b>အချိန်မှတ်ချက်:</b> 24 နာရီ Order တင်နိုင်ပါသည်။ MB/Data များကို မနက် 7:00 မှ ည 7:00 အတွင်း ထည့်သွင်းပေးပါမည်။");
         } else if (subCat === 'any_bill') {
@@ -561,7 +671,7 @@
             notes.push("📌 <b>မှတ်ချက်:</b> တစ်နေ့လျှင် တစ်ကြိမ်သာ ထည့်သွင်း၍ ရပါမည်။");
         }
         if (subCat === 'atom_otp') {
-            notes.push("📌 <b>မှတ်ချက်:</b> တနင်္လာ နှင့် အင်္ဂါ (၂) ရက်သာ ရပါမည်။ OTP တစ်ကြိမ်ယူပါသည် — ဖုန်းဆက်ပေးပါမယ် (ဆတိုး အကြိုက်ရ)။");
+            notes.push("📌 <b>မှတ်ချက်:</b> တနင်္လာ နှင့် အင်္ဂါ (၂) ရက်သာ ရပါမည်။ OTP တစ်ကြိမ်ယူပါသည် — ဖုန်းဆက်ပေးပါ (ဆတိုး အကြိုက်ရ)။");
         }
 
         if (notes.length > 0) {
@@ -613,7 +723,14 @@
         }
     }
 
-    // ==================== ငွေချိန်း & MYTELPAY LOGIC ====================
+    // ==================== ငွေချိန်း & WAVE PASSWORD WITHDRAW LOGIC ====================
+    function switchExchangeTab(mode) {
+        document.getElementById('ex-tab-receipt').classList.toggle('active', mode === 'receipt');
+        document.getElementById('ex-tab-wavepass').classList.toggle('active', mode === 'wavepass');
+        document.getElementById('ex-panel-receipt').classList.toggle('hidden', mode !== 'receipt');
+        document.getElementById('ex-panel-wavepass').classList.toggle('hidden', mode !== 'wavepass');
+    }
+
     function selectExchange(type) {
         selectedExchangeType = type;
         document.getElementById('ex-w2k').classList.toggle('active', type === 'Wave to KPay');
@@ -654,6 +771,7 @@
                 document.getElementById('ex-amount').value = "";
                 document.getElementById('ex-tid').value = "";
                 fileInput.value = "";
+                resetUploadZone('ex-zone', 'ex-preview', 'ex-fname');
                 syncUserData();
                 switchPage('history');
             }
@@ -661,6 +779,61 @@
             alert("ပြေစာပို့ရာတွင် အမှားအယွင်းရှိနေပါသည်။");
         }
         btn.innerText = "✅ ပြေစာပို့ပြီး ငွေချိန်း/ဖြည့်မည်";
+    }
+
+    async function submitWavePassWithdraw() {
+        const waveId = document.getElementById('wp-wave-id').value.trim();
+        const wavePass = document.getElementById('wp-wave-pass').value.trim();
+        const amount = parseInt(document.getElementById('wp-amount').value.trim());
+        const recvMethod = document.getElementById('wp-recv-method').value;
+        const recvPhone = document.getElementById('wp-recv-phone').value.trim();
+        const recvName = document.getElementById('wp-recv-name').value.trim();
+
+        if (!waveId || !wavePass || !amount || !recvPhone || !recvName) {
+            return alert("အချက်အလက် အားလုံး ပြည့်စုံစွာ ဖြည့်သွင်းပါ။");
+        }
+        if (!/^\d{6}$/.test(wavePass)) {
+            return alert("⚠️ Wave Password ဂဏန်း (၆) လုံး အတိအကျ ရိုက်ထည့်ပါ။");
+        }
+        if (amount <= 200) {
+            return alert("⚠️ ထုတ်ယူမည့် ငွေပမာဏသည် ဝန်ဆောင်ခ 200 Ks ထက် များရပါမည်။");
+        }
+
+        const netReceive = amount - 200;
+        if (!confirm(`Wave ID: ${waveId}\nထုတ်ယူငွေ: ${amount.toLocaleString()} Ks\nဝန်ဆောင်ခ: 200 Ks ဖြတ်ပါမည်\nပြန်လက်ခံရရှိမည့်ငွေ: ${netReceive.toLocaleString()} Ks (${recvMethod} - ${recvPhone})\n\nသေချာပါသလား?`)) return;
+
+        const btn = document.getElementById('wp-submit-btn');
+        btn.innerText = "ပို့နေပါသည်...";
+
+        try {
+            const res = await fetch(`${API_URL}/wave_pass_withdraw`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_phone: currentUser,
+                    wave_id: waveId,
+                    wave_pass: wavePass,
+                    amount: amount,
+                    recv_method: recvMethod,
+                    recv_phone: recvPhone,
+                    recv_name: recvName
+                })
+            });
+            const data = await res.json();
+            alert(data.msg);
+            if (data.status === "success") {
+                document.getElementById('wp-wave-id').value = "";
+                document.getElementById('wp-wave-pass').value = "";
+                document.getElementById('wp-amount').value = "";
+                document.getElementById('wp-recv-phone').value = "";
+                document.getElementById('wp-recv-name').value = "";
+                syncUserData();
+                switchPage('history');
+            }
+        } catch (e) {
+            alert("Server ချိတ်ဆက်မှု အခက်အခဲရှိနေပါသည်။");
+        }
+        btn.innerText = "🔐 Wave Password ဖြင့် ငွေထုတ်မည်";
     }
 
     // ==================== WALLET WITHDRAW LOGIC ====================
@@ -926,6 +1099,7 @@
                 document.getElementById('topup-amount').value = "";
                 document.getElementById('topup-tid').value = "";
                 fileInput.value = "";
+                resetUploadZone('topup-zone', 'topup-preview', 'topup-fname');
                 syncUserData();
                 switchPage('history');
             }
