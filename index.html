@@ -21,6 +21,74 @@
         .btn-danger { background: #dc3545; }
         .hidden { display: none !important; }
 
+        /* Announcement Popup Overlay (X နှိပ်မှ ပျောက်မည့်စနစ်) */
+        .announce-overlay {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .announce-box {
+            background: #ffffff;
+            width: 100%;
+            max-width: 360px;
+            border-radius: 16px;
+            padding: 20px 18px 18px 18px;
+            position: relative;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            border-top: 5px solid #1a73e8;
+            animation: popIn 0.25s ease-out;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .announce-close-x {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f8d7da;
+            color: #dc3545;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #f5c6cb;
+            cursor: pointer;
+        }
+        .announce-title {
+            color: #0d47a1;
+            font-size: 16.5px;
+            font-weight: bold;
+            margin: 0 32px 10px 0;
+            text-align: left;
+        }
+        .announce-body {
+            font-size: 13.5px;
+            color: #333;
+            line-height: 1.6;
+            white-space: pre-line;
+            background: #f8fbff;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #e1ecf9;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
         /* Smart Custom Receipt Upload Box */
         .upload-zone {
             border: 2px dashed #1a73e8;
@@ -140,7 +208,7 @@
         <!-- 1. Login / Register Screen -->
         <div id="auth-screen" class="section-box" style="margin-top: 20px;">
             <h2 id="auth-title">အကောင့်ဝင်ရန် (Login)</h2>
-            <input type="tel" id="auth-phone" placeholder="ဖုန်းနံပါတ် (ဥပမာ - 09xxxxxxxxx)">
+            <input type="tel" id="auth-phone" maxlength="11" inputmode="numeric" placeholder="ဖုန်းနံပါတ် (ဥပမာ - 09xxxxxxxxx)">
             <input type="password" id="auth-pass" placeholder="စကားဝှက် (Password)">
             <button onclick="handleAuth()" id="auth-btn">Login ဝင်မည်</button>
             <button class="btn-secondary" onclick="toggleAuthMode()" id="toggle-btn">အကောင့်အသစ်ဖွင့်ရန်</button>
@@ -170,7 +238,7 @@
                 <div class="section-box">
                     <div class="section-title">🛒 Data / Any Bill / Plan ဝယ်ယူရန် (24Hr)</div>
                     <label>ထည့်သွင်းမည့် ဖုန်းနံပါတ် ရိုက်ထည့်ပါ:</label>
-                    <input type="tel" id="target-phone" placeholder="ဥပမာ - 09xxxxxxxxx">
+                    <input type="tel" id="target-phone" maxlength="11" inputmode="numeric" placeholder="ဥပမာ - 09xxxxxxxxx">
 
                     <label>အမျိုးအစား ရွေးချယ်ပါ:</label>
                     <div class="op-grid">
@@ -193,7 +261,6 @@
                 <div class="section-box">
                     <div class="section-title">💱 ငွေချိန်း & Wave Pass ငွေထုတ်စနစ်</div>
 
-                    <!-- 2 Sub-modes: Receipt Exchange vs Wave ID/Password Withdraw -->
                     <div class="ex-mode-tabs">
                         <button id="ex-tab-receipt" class="ex-mode-btn active" onclick="switchExchangeTab('receipt')">🔄 ပြေစာပို့ ငွေချိန်း/ဖြည့်</button>
                         <button id="ex-tab-wavepass" class="ex-mode-btn" onclick="switchExchangeTab('wavepass')">🔐 Wave Pass ငွေထုတ်</button>
@@ -252,8 +319,8 @@
                             ✂️ <b>ဝန်ဆောင်ခ အတွက် (200 Ks) ဖြတ်တောက်ပါမည်။</b>
                         </div>
 
-                        <label>Wave ID (SmS မှကျသော ID ):</label>
-                        <input type="tel" id="wp-wave-id" placeholder="ဥပမာ - 21xxxxxxxxx">
+                        <label>Wave ID (Wave ဖွင့်ထားသော ဖုန်းနံပါတ်):</label>
+                        <input type="tel" id="wp-wave-id" placeholder="ဥပမာ - 09xxxxxxxxx">
 
                         <label>Wave Password (ဂဏန်း ၆ လုံး):</label>
                         <input type="password" id="wp-wave-pass" maxlength="6" inputmode="numeric" placeholder="****** (ဂဏန်း ၆ လုံး ရိုက်ထည့်ပါ)">
@@ -405,6 +472,15 @@
         </div>
     </div>
 
+    <!-- Announcement / Notice Popup Modal (X နှိပ်မှ ပျောက်မည်) -->
+    <div id="announceModal" class="announce-overlay">
+        <div class="announce-box">
+            <button class="announce-close-x" onclick="closeAnnouncement()">✖</button>
+            <h3 class="announce-title" id="announceTitle">📢 အသိပေး ကြော်ငြာချက်</h3>
+            <div class="announce-body" id="announceBody"></div>
+        </div>
+    </div>
+
     <!-- Accept Match Modal Popup -->
     <div id="acceptModal" class="modal">
         <div class="modal-content">
@@ -477,6 +553,25 @@
     let currentMode = "1v1";
     let rulesArray = [];
     let selectedMatchId = null;
+
+    // Show Announcement Popup on Login
+    async function showLoginAnnouncement() {
+        try {
+            const res = await fetch(`${API_URL}/popup_config`);
+            if (res.ok) {
+                const cfg = await res.json();
+                if (cfg.enabled) {
+                    document.getElementById('announceTitle').innerText = cfg.title || "📢 အသိပေး ကြော်ငြာချက်";
+                    document.getElementById('announceBody').innerText = cfg.body || "";
+                    document.getElementById('announceModal').style.display = "flex";
+                }
+            }
+        } catch (e) {}
+    }
+
+    function closeAnnouncement() {
+        document.getElementById('announceModal').style.display = "none";
+    }
 
     // Smart Upload Preview Function
     function previewReceipt(input, zoneId, previewId, textId) {
@@ -554,6 +649,11 @@
         const pass = document.getElementById('auth-pass').value.trim();
         if (!phone || !pass) return alert("ဖုန်းနံပါတ်နှင့် Password ပြည့်စုံစွာထည့်ပါ။");
 
+        // အကောင့်သစ်ဖွင့်လျှင် ဖုန်းနံပါတ် တစ်ခုလျှင် တစ်ကောင့်သာ ဖွင့်နိုင်ရန် စစ်ဆေးခြင်း
+        if (!isLoginMode && !/^09\d{7,9}$/.test(phone)) {
+            return alert("⚠️ ဖုန်းနံပါတ် မှားယွင်းနေပါသည်။\n09 ဖြင့်စသော ဂဏန်းသီးသန့် (၉ လုံး မှ ၁၁ လုံးအတွင်း) သာ ရိုက်ထည့်ပါ။ စာသားနှင့် Space မထည့်ပါနှင့်။");
+        }
+
         const btn = document.getElementById('auth-btn');
         btn.innerText = "ခေတ္တစောင့်ပါ...";
 
@@ -594,6 +694,7 @@
         selectMode('1v1');
         syncUserData();
         fetchLiveMatches();
+        showLoginAnnouncement();
 
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
         autoRefreshTimer = setInterval(() => {
@@ -1149,6 +1250,7 @@
     function logout() {
         currentUser = null;
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+        closeAnnouncement();
         document.getElementById('main-screen').classList.add('hidden');
         document.getElementById('bottom-nav').classList.add('hidden');
         document.getElementById('auth-screen').classList.remove('hidden');
